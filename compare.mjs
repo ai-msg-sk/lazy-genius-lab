@@ -1,7 +1,6 @@
 // The finale: Round A vs Round B on your own numbers, then what it means for a real team.
 // Usage: node compare.mjs [--devs 10] [--per-day 20] [--days 220] [--reports 20]
-import { readFileSync, existsSync } from "node:fs";
-import { check } from "./lib/check.mjs";
+import { loadResults } from "./lib/results.mjs";
 import { showQR } from "./lib/qr.mjs";
 import { brandLine, step, note, nextBox, cmd, c, fg, sleep, isTTY, out, vis } from "./lib/tui.mjs";
 
@@ -9,37 +8,7 @@ const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ?
 const DEVS = arg("devs", 10), PER_DAY = arg("per-day", 20), DAYS = arg("days", 220), REPORTS = arg("reports", 20);
 
 // ── your runs ─────────────────────────────────────────────────────────────────────
-const runs = existsSync("runs.jsonl") ? readFileSync("runs.jsonl", "utf8").trim().split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : [];
-const tok = (r) => (r.promptTokens ?? 0) + (r.completionTokens ?? 0);
-const scoreOf = (obj) => { try { return check(obj).filter((x) => x.ok).length; } catch { return null; } };
-
-const lastA = runs.filter((r) => r.tag?.startsWith("A:paste") && r.ok).at(-1);
-let A = { score: 0, cost: 0.151, tokens: 170_638, secs: 52.6, ref: true };
-if (lastA) {
-  let s = null;
-  try { s = scoreOf(JSON.parse(lastA.text.match(/\{[\s\S]*\}/)[0])); } catch {}
-  A = { score: s ?? 0, cost: lastA.cost, tokens: tok(lastA), secs: lastA.ms / 1000, ref: false };
-}
-
-const iFirst = runs.map((r) => r.tag).lastIndexOf("B:write:1");
-const bRuns = iFirst >= 0 ? runs.slice(iFirst).filter((r) => r.tag?.startsWith("B:")) : [];
-let bScore = null;
-try {
-  const ans = JSON.parse(readFileSync("answers.json", "utf8"));
-  const aAns = lastA ? JSON.parse(lastA.text.match(/\{[\s\S]*\}/)[0]) : null;
-  // answers.json still holds Round A's guess → Round B hasn't happened yet
-  if (!aAns || JSON.stringify(ans) !== JSON.stringify(aAns)) bScore = scoreOf(ans);
-} catch {}
-let B = { score: bScore ?? 5, cost: 0.0137, tokens: 21_000, secs: 2.6, ref: true };
-if (bRuns.length) B = { score: bScore, cost: bRuns.reduce((s, r) => s + (r.cost ?? 0), 0), tokens: bRuns.reduce((s, r) => s + tok(r), 0), secs: 2.6, ref: false };
-else if (bScore !== null) {
-  // Round B done with Claude Code: tokens aren't logged here, so take the real spend of key B from OpenRouter.
-  try {
-    const key = readFileSync(".env", "utf8").match(/^OPENROUTER_KEY_B=(.+)$/m)[1].trim();
-    const j = await (await fetch("https://openrouter.ai/api/v1/key", { headers: { Authorization: `Bearer ${key}` } })).json();
-    B = { score: bScore, cost: j.data.usage ?? 0, tokens: null, secs: 2.6, ref: false };
-  } catch {}
-}
+const { A, B, bScore } = await loadResults(); // lib/results.mjs: runs.jsonl + answers.json (+ key B spend)
 
 // ── helpers ───────────────────────────────────────────────────────────────────────
 const money = (n) => (n >= 1000 ? `$${Math.round(n).toLocaleString("en")}` : n >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(4)}`);
@@ -127,5 +96,8 @@ nextBox([
   ``,
   `When we're done:  ${cmd("node cleanup.mjs")}`,
 ]);
+
+// 5/5 in Round B: the shareable "Lazy Genius certified" badge (badge.html + a terminal copy), then the feedback QR.
+if (bScore === 5) { try { await (await import("./lib/badge.mjs")).showBadge({ A, B }); } catch {} }
 
 await showQR({ seconds: 25 });
