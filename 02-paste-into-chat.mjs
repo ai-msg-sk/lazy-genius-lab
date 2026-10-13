@@ -118,7 +118,7 @@ if (!parsed) {
   out(`  ${c.yellow}${c.bold}The AI refused to guess.${c.reset} ${c.grey}Honest, but the sponsors still have no numbers at 10:00.${c.reset}\n`);
   out(`  ${c.grey}Notice what it suggests instead: write code over the full export. That's Round B.${c.reset}\n`);
   scoreBox({ score: 0, cost: res.cost || costNow(), seconds: secs, round: "A" });
-  const copied = await copyToClipboard(ROUND_B_PROMPT).catch(() => false);
+  const copied = copyToClipboard(ROUND_B_PROMPT);
   nextBox([
     `1  Write 0/5 and the cost on your sheet (Round A column)`,
     `2  Round B, let the AI write code:`,
