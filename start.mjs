@@ -5,12 +5,15 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { scryptSync, createDecipheriv } from "node:crypto";
-import { banner, step, checkLine, decode, box, c, sleep, isTTY } from "./lib/tui.mjs";
+import { intro, banner, step, checkLine, decode, box, nextBox, cmd, c, sleep, isTTY } from "./lib/tui.mjs";
 
-const has = (cmd, args = ["--version"]) => { try { return execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); } catch { return null; } };
+const has = (bin, args = ["--version"], opts = {}) => { try { return execFileSync(bin, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000, ...opts }).trim(); } catch { return null; } };
+// Python 3 only (the Windows Store alias stub prints "Python was not found" and is not Python).
+const py3 = (bin, args = ["--version"]) => { const v = has(bin, args); return v && /Python 3\./.test(v) ? v : null; };
 const out = (s) => process.stdout.write(s);
 
-await banner("READY", ".msg · OpenSlava '26 · the lazy genius lab");
+await intro();
+await banner("READY", "the lazy genius lab · OpenSlava 2026 · 14 Oct");
 
 // 1. keys
 const env = existsSync(".env") ? readFileSync(".env", "utf8") : "";
@@ -31,8 +34,10 @@ if (!A || !B || input) {
   if (!input) {
     if (process.stdin.isTTY) {
       const rl = createInterface({ input: process.stdin, output: process.stdout });
+      if (isTTY) out("\x1b[?25h");
       input = await rl.question(`  ${c.pink}▸${c.reset} ${c.bold}Claim code from your sheet${c.reset} ${c.grey}(e.g. 012-DUNAJ-K7QX)${c.reset}: `);
       rl.close();
+      if (isTTY) out("\x1b[?25l");
     } else input = readFileSync(0, "utf8").split("\n")[0];
   }
   try {
@@ -54,8 +59,8 @@ step("Checking your machine");
 const [maj] = process.versions.node.split(".").map(Number);
 let ready = true;
 ready = (await checkLine("Node.js", async () => [maj >= 18, maj >= 18 ? process.versions.node : `${process.versions.node}, need 18+ (nodejs.org)`])) && ready;
-await checkLine("Python", async () => { const py = has("python3") ?? has("python"); return py ? [true, py.replace("Python ", "")] : [null, "not found (optional, used by Round B)"]; });
-await checkLine("Claude Code", async () => { const cc = has("claude"); return cc ? [true, cc.split(" ")[0]] : [null, "not installed (optional, see the sheet)"]; });
+await checkLine("Python", async () => { const py = py3("python3") ?? py3("python") ?? py3("py", ["-3", "--version"]); return py ? [true, py.replace("Python ", "")] : [null, "not found (optional, used by Round B)"]; });
+await checkLine("Claude Code", async () => { const cc = has("claude", ["--version"], process.platform === "win32" ? { shell: true } : {}); return cc ? [true, cc.split(" ")[0]] : [null, "not installed (optional, see the sheet)"]; });
 ready = (await checkLine("The Excel", async () => [existsSync("data/openslava-2026-export.xlsx"), "150,000 rows, 6 sheets"])) && ready;
 
 // 3. keys work?
@@ -86,6 +91,10 @@ await checkLine("Claude Code wired to key B (Haiku 5.5)", async () => {
 });
 
 if (isTTY) await sleep(200);
-box(ready
-  ? [`${c.green}${c.bold}You're in.${c.reset}  Next: ${c.bold}Round A${c.reset}`, ``, `${c.pink}$${c.reset} node 02-paste-into-chat.mjs`]
-  : [`${c.red}${c.bold}Something is missing.${c.reset} Fix the ✗ above or raise your hand.`], ready ? c.pink : c.red);
+if (ready) nextBox([
+  `${c.green}${c.bold}You're in.${c.reset}`,
+  ``,
+  `1  Read ${c.white}${c.bold}TASK.md${c.reset} first ${c.grey}(2 min)${c.reset}`,
+  `2  Round A:  ${cmd("node 02-paste-into-chat.mjs")}`,
+]);
+else box([`${c.red}${c.bold}Something is missing.${c.reset} Fix the ✗ above or raise your hand.`], c.red);

@@ -1,7 +1,7 @@
 // Checks answers.json against hashed ground truth. Right/wrong per question, no leaks.
 import { readFileSync } from "node:fs";
 import { check } from "./lib/check.mjs";
-import { revealChecks, isTTY } from "./lib/tui.mjs";
+import { brandLine, step, revealChecks, scoreBox, nextBox, cmd, c, isTTY } from "./lib/tui.mjs";
 
 let answers;
 try {
@@ -11,11 +11,17 @@ try {
   process.exit(1);
 }
 
+brandLine("verify");
+step("Checking answers.json against the real numbers");
 const results = check(answers);
-if (isTTY) {
-  await revealChecks(results);
-} else {
-  for (const r of results) console.log(`${r.ok ? "✅" : "❌"} ${r.key.padEnd(38)} ${JSON.stringify(r.value ?? "(missing)")}`);
-}
+await revealChecks(results);
 const score = results.filter((r) => r.ok).length;
-console.log(`\nScore: ${score}/5${score === 5 ? "  🧠 lazy genius certified" : ""}`);
+if (!isTTY) console.log(`Score: ${score}/5`); // plain line for agents and logs
+scoreBox({ score });
+if (score === 5) nextBox([
+  `Write your Round B score and cost on the sheet.`,
+  `Raise your hand: ${c.bold}lowest cost with 5/5 wins ElevenLabs Pro.${c.reset}`,
+  ``,
+  `When we're done:  ${cmd("node cleanup.mjs")}`,
+]);
+else nextBox([`Not there yet: ask the AI to fix the ✗ questions, then  ${cmd("node verify.mjs")}`]);

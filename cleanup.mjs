@@ -5,14 +5,21 @@ import { existsSync, rmSync, readdirSync, statSync, readFileSync } from "node:fs
 import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
-import { banner, step, checkLine, box, c, isTTY } from "./lib/tui.mjs";
+import { brandLine, banner, step, checkLine, box, c, isTTY } from "./lib/tui.mjs";
 
 const out = (s) => process.stdout.write(s);
 const here = process.cwd();
+brandLine("cleanup");
 await banner("BYE", "cleaning up after the lazy genius lab");
 
 // Claude Code keeps per-folder history here; it may contain what the agent read in this folder.
-const ccHistory = path.join(homedir(), ".claude", "projects", here.replace(/[^A-Za-z0-9]/g, "-"));
+const projRoot = path.join(process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), ".claude"), "projects");
+const slug = here.replace(/[^A-Za-z0-9]/g, "-");
+const ccHistory = (() => {
+  if (process.platform !== "win32") return path.join(projRoot, slug);
+  try { const hit = readdirSync(projRoot).find((n) => n.toLowerCase() === slug.toLowerCase()); if (hit) return path.join(projRoot, hit); } catch {}
+  return path.join(projRoot, slug);
+})();
 
 const targets = [
   [".env", "your two API keys"],
@@ -54,14 +61,21 @@ await checkLine("scanning files for sk-or-v1-…", async () => {
 let removeAll = process.argv.includes("--all");
 if (!removeAll && process.stdin.isTTY) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const a = await rl.question(`\n  ${c.pink}▸${c.reset} ${c.bold}Delete the whole lab folder too?${c.reset} ${c.grey}(${here.replace(homedir(), "~")})${c.reset} [y/N] `);
+  if (isTTY) out("\x1b[?25h");
+  const a = await rl.question(`\n  ${c.pink}▸${c.reset} ${c.bold}Delete the whole lab folder too?${c.reset} ${c.grey}(${here.replace(homedir(), "~")})${c.reset} [y/N] `).catch(() => "");
   rl.close();
+  if (isTTY) out("\x1b[?25l");
   removeAll = /^y/i.test(a.trim());
 }
 if (removeAll) {
   out("\n");
   await checkLine(`lab folder  ${c.grey}${here.replace(homedir(), "~")}${c.reset}`, async () => {
-    rmSync(here, { recursive: true, force: true });
+    process.chdir(path.dirname(here));
+    try { rmSync(here, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }); }
+    catch (e) {
+      if (process.platform === "win32" && /EBUSY|EPERM|ENOTEMPTY/.test(e.code)) return [null, `emptied; a terminal/editor is still inside it. Close claude/VS Code, then: cd ..; Remove-Item -Recurse -Force ${path.basename(here)}`];
+      throw e;
+    }
     return [!existsSync(here), "deleted"];
   });
 }

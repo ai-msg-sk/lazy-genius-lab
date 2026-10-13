@@ -1,6 +1,7 @@
 // Exercise 1: same math, many models, several runs. Who is right? Who is consistent?
 // Usage: node 01-shootout.mjs [runs=3]
 import { ask, MODELS, usd } from "./lib/or.mjs";
+import { brandLine, banner, step, note, region, box, cmd, spin, vis, c, isTTY, out } from "./lib/tui.mjs";
 
 const RUNS = Number(process.argv[2] ?? 1);
 
@@ -30,29 +31,49 @@ const TASKS = [
 const clean = (s) => s.replace(/[^\d.\-]/g, "").replace(/\.$/, "");
 const models = MODELS.cheap;
 
-console.log(`Ground truth (computed locally in ~0 ms, $0):`);
-for (const t of TASKS) console.log(`  ${t.id.padEnd(5)} ${t.truth}`);
-console.log(`\nAsking ${models.length} models × ${TASKS.length} tasks × ${RUNS} runs ...\n`);
+brandLine("Exercise 1 · shootout");
+await banner("ROUND A", "same math, many models · key A");
+step("Ground truth, computed locally in ~0 ms, $0");
+for (const t of TASKS) note(`${t.id.padEnd(5)} ${c.white}${t.truth}${c.reset}`);
+out("\n");
+step(`Asking ${models.length} models × ${TASKS.length} tasks × ${RUNS} run${RUNS > 1 ? "s" : ""}`);
+
+// live table: one cell per model × task, spinner until all runs are in, then ✓ n/n / ✗ / ERR
+const done = new Map(); // `${m}|${t.id}` -> [res...]
+const key = (m, t) => `${m}|${t.id}`;
+const cell = (m, t, f) => {
+  const rs = done.get(key(m, t)) ?? [];
+  if (rs.length < RUNS) return `${c.pink}${spin(f + t.id.length)}${c.reset}${c.grey}${rs.length ? ` ${rs.length}/${RUNS}` : ""}${c.reset}`;
+  if (rs.some((r) => !r.ok)) return `${c.red}ERR${c.reset}`;
+  const ok = rs.filter((r) => clean(r.text) === t.truth).length;
+  return `${ok === RUNS ? c.green + "✓" : ok ? c.yellow + "~" : c.red + "✗"} ${ok}/${RUNS}${c.reset}`;
+};
+const pad = (s, n) => s + " ".repeat(Math.max(0, n - vis(s)));
+const costOf = (m) => TASKS.reduce((s, t) => s + (done.get(key(m, t)) ?? []).reduce((a, r) => a + r.cost, 0), 0);
+const table = (f) => {
+  const head = `    ${c.grey}${"model".padEnd(34)}${TASKS.map((t) => t.id.padEnd(8)).join("")}cost${c.reset}`;
+  const rows = models.map((m) => `    ${c.white}${m.padEnd(34)}${c.reset}${TASKS.map((t) => pad(cell(m, t, f), 8)).join("")}${c.yellow}${usd(costOf(m))}${c.reset}`);
+  const total = models.reduce((s, m) => s + costOf(m), 0);
+  return [head, ...rows, `    ${c.grey}${"total".padEnd(34 + TASKS.length * 8)}${c.reset}${c.yellow}${c.bold}${usd(total)}${c.reset}`];
+};
+const reg = isTTY ? region() : null;
+let f = 0;
+const tick = isTTY ? setInterval(() => reg.draw(table(f++)), 90) : null;
 
 const jobs = [];
 for (const m of models) for (const t of TASKS) for (let r = 0; r < RUNS; r++)
-  jobs.push(ask(m, t.prompt, { tag: `A:shootout:${t.id}`, maxTokens: 6000 }).then((res) => ({ m, t, res })));
+  jobs.push(ask(m, t.prompt, { tag: `A:shootout:${t.id}`, maxTokens: 6000 }).then((res) => {
+    done.set(key(m, t), [...(done.get(key(m, t)) ?? []), res]);
+    return { m, t, res };
+  }));
 const results = await Promise.all(jobs);
+if (isTTY) { clearInterval(tick); reg.draw(table(f)); } else for (const l of table(0)) out(l + "\n");
 
-let totalCost = 0;
-const header = "model".padEnd(36) + TASKS.map((t) => t.id.padEnd(8)).join("") + "cost";
-console.log(header + "\n" + "-".repeat(header.length + 6));
-for (const m of models) {
-  let line = m.padEnd(36), cost = 0;
-  for (const t of TASKS) {
-    const rs = results.filter((x) => x.m === m && x.t === t);
-    const ok = rs.filter((x) => x.res.ok && clean(x.res.text) === t.truth).length;
-    const err = rs.some((x) => !x.res.ok);
-    line += (err ? "ERR" : `${ok}/${rs.length}`).padEnd(8);
-    cost += rs.reduce((s, x) => s + x.res.cost, 0);
-  }
-  totalCost += cost;
-  console.log(line + usd(cost));
-}
-console.log(`\nTotal spent: ${usd(totalCost)}. The deterministic version: 4 lines of code, $0, 100 % every time.`);
-console.log("Wrong answers are in runs.jsonl. Look at how *confidently* wrong they are.");
+const totalCost = results.reduce((s, x) => s + x.res.cost, 0);
+box([
+  `${c.grey}Total spent${c.reset}  ${c.yellow}${c.bold}${usd(totalCost)}${c.reset}`,
+  `The deterministic version: 4 lines of code, $0, 100 % every time.`,
+  `${c.grey}Wrong answers are in runs.jsonl. Look at how ${c.reset}${c.italic}confidently${c.reset}${c.grey} wrong they are.${c.reset}`,
+  ``,
+  `Next:  ${cmd("node 02-paste-into-chat.mjs")}`,
+]);
