@@ -65,6 +65,7 @@ Sonnet and GPT-6.1 Sol eat $0.50 fast. You have been warned.
 | `node prompt.mjs` | copy the Round B prompt to your clipboard again |
 | `node verify.mjs` | check my-work/answers.json (at 5/5 it shows the A-vs-B finale) |
 | `node compare.mjs` | the A-vs-B finale: cost, tokens, time, a year in a real team |
+| `node bonus.mjs` | a second export arrives: your Round B program reruns on it for $0 |
 | `node feedback.mjs` | rate the workshop (QR code) |
 | `node show.mjs` | the 30-second intro loop from the projector |
 | `node cleanup.mjs` | delete your keys and everything the lab created |

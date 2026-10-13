@@ -94,7 +94,10 @@ out(`  ${c.bold}AI writes. Code runs. AI checks.${c.reset}  ${c.grey}Put that ru
 nextBox([
   `Write both columns on your sheet. Lowest Round B cost with 5/5 wins ElevenLabs Pro.`,
   ``,
-  `When we're done:  ${cmd("node cleanup.mjs")}`,
+  `Bonus (1 min): the organizers found a second export. Does your code survive it?`,
+  `     ${cmd("node bonus.mjs")}`,
+  ``,
+  `When we're done:  ${cmd("node cleanup.mjs")}  ${c.grey}(your work in my-work/ stays)${c.reset}`,
 ]);
 
 // 5/5 in Round B: the shareable "Lazy Genius certified" badge (badge.html + a terminal copy), then the feedback QR.

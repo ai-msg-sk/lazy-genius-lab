@@ -207,13 +207,11 @@ results = check(JSON.parse(readFileSync(ANSWERS, "utf8")));
 score = results.filter((r) => r.ok).length;
 await revealChecks(results);
 scoreBox({ score, cost: spent, seconds: secs, round: "B" });
-if (score === 5) nextBox([
-  `Write your Round B score and cost on the sheet.`,
-  `Raise your hand: ${c.bold}lowest cost with 5/5 wins ElevenLabs Pro.${c.reset}`,
-  ``,
-  `When we're done:  ${cmd("node cleanup.mjs")}`,
-]);
-else nextBox([
+if (score === 5) {
+  // 5/5: straight into the finale (A vs B, badge, bonus, feedback QR), same as verify.mjs
+  const { spawnSync } = await import("node:child_process");
+  spawnSync(process.execPath, [new URL("./compare.mjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")], { stdio: "inherit" });
+} else nextBox([
   `Not there yet: ask the AI to fix the ✗ questions, then  ${cmd("node verify.mjs")}`,
   `Or retry the loop:  ${cmd("node 03-orchestrator.mjs")}`,
 ]);

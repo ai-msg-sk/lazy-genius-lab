@@ -1,0 +1,74 @@
+[
+ {
+  "sheet": "Program",
+  "oldRows": 59,
+  "newRows": 59,
+  "changed": 54,
+  "pct": 92,
+  "example": {
+   "row": 5,
+   "old": "T02 · Observability under audit · Ján Koreň · Room 1 · 14.10.2026 · 10",
+   "new": "T02 · eBPF that actually scales · Andrej Bartoš · Room 1 · 14.10.2026 "
+  }
+ },
+ {
+  "sheet": "Registrácie",
+  "oldRows": 7130,
+  "newRows": 7090,
+  "changed": 7130,
+  "pct": 100,
+  "example": {
+   "row": 5,
+   "old": "R00182 · JAKUB ŽÁK ·  jakub.zak@azet.sk  · - · student · 2026-08-23 22",
+   "new": "R01009 · Ján Hudák · jan.hudak@azet.sk · freelancer · Regular · 30.9.2"
+  }
+ },
+ {
+  "sheet": "Vstupy",
+  "oldRows": 30321,
+  "newRows": 29677,
+  "changed": 30321,
+  "pct": 100,
+  "example": {
+   "row": 5,
+   "old": "14.10.2026 07:00:06 · A · R06166 · Deň 1",
+   "new": "14.10.2026 07:00:13 · A · R00650 · Deň 1"
+  }
+ },
+ {
+  "sheet": "Hodnotenia",
+  "oldRows": 40686,
+  "newRows": 40646,
+  "changed": 40686,
+  "pct": 100,
+  "example": {
+   "row": 5,
+   "old": "14.10.2026 11:01:09 · T08 · ★★★★☆ · R05663",
+   "new": "14.10.2026 20:16:53 · eBPF at 3 a.m. (part 2) · 3 · R06957"
+  }
+ },
+ {
+  "sheet": "Catering",
+  "oldRows": 51051,
+  "newRows": 51071,
+  "changed": 51071,
+  "pct": 100,
+  "example": {
+   "row": 5,
+   "old": "13.10.2026 07:12:20 · TEST · Espresso · 1 · 2,20 € · STAFF-01",
+   "new": "13.10.2026 07:13:08 · TEST · Voda 0,5 l · 1 · €1.50 · STAFF-01"
+  }
+ },
+ {
+  "sheet": "Office planning",
+  "oldRows": 21743,
+  "newRows": 21789,
+  "changed": 21789,
+  "pct": 100,
+  "example": {
+   "row": 5,
+   "old": "P010858 · Rezervácia · Open space A · 12.8.2026 11:30 · 12.8.2026 12:3",
+   "new": "P006211 · Rezervácia · Poprad · 7.5.2026 11:30 · 2026-05-07 12:30 · Fa"
+  }
+ }
+]
