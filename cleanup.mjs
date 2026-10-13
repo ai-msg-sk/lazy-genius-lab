@@ -1,16 +1,14 @@
 // End of the lab: removes your keys and everything the lab created on this machine, then proves it.
-// Usage: node cleanup.mjs          (asks before deleting the whole folder)
-//        node cleanup.mjs --all    (also deletes the lab folder, no question)
+// Usage: node cleanup.mjs          (keys + lab files, then the feedback QR)
+//        node cleanup.mjs --all    (also deletes the whole lab folder)
 import { existsSync, rmSync, readdirSync, statSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
+import { showQR } from "./lib/qr.mjs"; // static import: loaded before anything is deleted
 import { brandLine, banner, step, checkLine, box, c, isTTY } from "./lib/tui.mjs";
 
 const out = (s) => process.stdout.write(s);
-// load the feedback QR now: with --all the folder (and lib/) is gone by the end
-const { showQR } = await import("./lib/qr.mjs");
-await import("./lib/qr-art.mjs");
 const here = process.cwd();
 brandLine("cleanup");
 await banner("BYE", "cleaning up after the lazy genius lab");
@@ -61,15 +59,8 @@ await checkLine("scanning files for sk-or-v1-…", async () => {
   return leftovers.length ? [false, `still found in: ${leftovers.join(", ")}`] : [true, "0 keys found"];
 });
 
-let removeAll = process.argv.includes("--all");
-if (!removeAll && process.stdin.isTTY) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  if (isTTY) out("\x1b[?25h");
-  const a = await rl.question(`\n  ${c.pink}▸${c.reset} ${c.bold}Delete the whole lab folder too?${c.reset} ${c.grey}(${here.replace(homedir(), "~")})${c.reset} [y/N] `).catch(() => "");
-  rl.close();
-  if (isTTY) out("\x1b[?25l");
-  removeAll = /^y/i.test(a.trim());
-}
+// No questions: the keys and lab files are gone above; the whole folder only with --all.
+const removeAll = process.argv.includes("--all");
 if (removeAll) {
   out("\n");
   await checkLine(`lab folder  ${c.grey}${here.replace(homedir(), "~")}${c.reset}`, async () => {
