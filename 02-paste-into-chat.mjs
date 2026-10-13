@@ -2,7 +2,7 @@
 // The whole workbook is ~150k rows; this sends what fits when you copy-paste the first few %
 // of every sheet (data/paste-excerpt.txt, one "### <sheet> (first N of M rows)" section per sheet).
 // Usage: node 02-paste-into-chat.mjs [model=google/gemini-3.8-flash]
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, statSync } from "node:fs";
 import { askStream, priceOf } from "./lib/or.mjs";
 import { check } from "./lib/check.mjs";
 import { brandLine, banner, step, note, bar, revealChecks, scoreBox, nextBox, cmd, sleep, wrap, cols, c, isTTY, ASCII } from "./lib/tui.mjs";
@@ -36,7 +36,8 @@ if (sizes.fullBytes) {
   const fullTok = sizes.fullBytes / BYTES_PER_TOKEN;
   const maxPct = price.ctx ? Math.min(100, Math.round(((price.ctx / fullTok) * 100) / 5) * 5 || 1) : 0;
   whole = { tokens: fullTok, ctx: price.ctx, maxPct };
-  let s = `The whole Excel is ${(sizes.fullBytes / 1e6).toFixed(1)} MB ≈ ${kTok(fullTok)} tokens.`;
+  const xlsxMB = (statSync(new URL("./data/openslava-2026-export.xlsx", import.meta.url)).size / 1e6).toFixed(1);
+  let s = `The .xlsx file is ${xlsxMB} MB (it's zipped); copied out as text it's ${(sizes.fullBytes / 1e6).toFixed(1)} MB ≈ ${kTok(fullTok)} tokens.`;
   if (price.ctx && price.ctx < fullTok)
     s += ` ${model} reads at most ${kTok(price.ctx)} tokens (~${maxPct} % of the rows)${price.in ? `, and that would cost ~${money(price.ctx * price.in)} per question` : ""}. It can never see all of it.`;
   else if (price.ctx)
