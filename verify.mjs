@@ -11,7 +11,7 @@ try {
   process.exit(1);
 }
 
-brandLine("verify");
+await brandLine("verify");
 step("Checking answers.json against the real numbers");
 const results = check(answers);
 await revealChecks(results);

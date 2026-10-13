@@ -16,7 +16,7 @@ const sheets = [...excerpt.matchAll(/^### (.+?) \(first ([\d,]+) of ([\d,]+) row
 const seen = sheets.reduce((s, x) => s + x.n, 0), all = sheets.reduce((s, x) => s + x.of, 0);
 const pct = all ? Math.round((seen / all) * 100) : 0;
 
-brandLine("Round A");
+await brandLine("Round A");
 await banner("ROUND A", "let the AI guess · key A");
 
 step("Copying the spreadsheet into one chat message");

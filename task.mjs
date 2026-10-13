@@ -13,7 +13,7 @@ const out = (s) => process.stdout.write(s);
 const inline = (s) => s
   .replace(/\*\*([^*]+)\*\*/g, `${c.bold}${c.white}$1${c.reset}`)
   .replace(/`([^`]+)`/g, `${c.violet}$1${c.reset}`);
-brandLine("the assignment");
+await brandLine("the assignment");
 let fence = false;
 for (const raw of md.split("\n")) {
   const line = raw.replace(/\r$/, "");

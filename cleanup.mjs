@@ -10,7 +10,7 @@ import { brandLine, banner, step, checkLine, box, c, isTTY } from "./lib/tui.mjs
 
 const out = (s) => process.stdout.write(s);
 const here = process.cwd();
-brandLine("cleanup");
+await brandLine("cleanup");
 await banner("BYE", "cleaning up after the lazy genius lab");
 
 // Claude Code keeps per-folder history here; it may contain what the agent read in this folder.

@@ -83,7 +83,7 @@ async function type(s, ms = 9) {
 }
 
 // ── the show ──────────────────────────────────────────────────────────────────────
-brandLine("Round A vs Round B");
+await brandLine("Round A vs Round B");
 out("\n");
 step(`Same task, two ways${A.ref || B.ref ? `  ${c.grey}(missing runs filled with the speaker's reference numbers)${c.reset}` : ""}`);
 out("\n");

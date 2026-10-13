@@ -26,7 +26,7 @@ mkdirSync("generated", { recursive: true });
 const short = (m) => m.split("/").pop();
 const code = (s) => (s.match(/```(?:python|py)?\n([\s\S]*?)```/) ?? [, s])[1];
 
-brandLine("Round B");
+await brandLine("Round B");
 await banner("ROUND B", "let the AI write code · key B");
 note(`writer ${c.violet}${writer}${c.grey} · runtime ${c.violet}your laptop${c.grey} · tests ${c.violet}verify${c.reset}`);
 note(`checker ${c.violet}${checker}${c.grey} (only if a test fails)${c.reset}`);

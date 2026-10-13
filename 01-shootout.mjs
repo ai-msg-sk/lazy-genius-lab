@@ -31,7 +31,7 @@ const TASKS = [
 const clean = (s) => s.replace(/[^\d.\-]/g, "").replace(/\.$/, "");
 const models = MODELS.cheap;
 
-brandLine("Exercise 1 · shootout");
+await brandLine("Exercise 1 · shootout");
 await banner("ROUND A", "same math, many models · key A");
 step("Ground truth, computed locally in ~0 ms, $0");
 for (const t of TASKS) note(`${t.id.padEnd(5)} ${c.white}${t.truth}${c.reset}`);
