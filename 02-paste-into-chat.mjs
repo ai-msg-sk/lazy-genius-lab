@@ -42,7 +42,7 @@ try { sizes = JSON.parse(readFileSync(new URL("./data/sizes.json", import.meta.u
 const promptTokensEst = Math.round((Buffer.byteLength(task) + Buffer.byteLength(excerpt)) / BYTES_PER_TOKEN);
 const kTok = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : `${Math.round(n / 1000)}k`);
 const money = (n) => `$${n.toFixed(n < 0.1 ? 3 : 2)}`;
-note(`${(excerpt.length / 1024).toFixed(0)} KB pasted: ${seen.toLocaleString("en")} of ${(sizes.fullRows ?? all).toLocaleString("en")} rows (${pct} %), ~${kTok(promptTokensEst)} tokens${price.in ? `, ~${money(promptTokensEst * price.in)}` : ""}.`);
+note(`${(Buffer.byteLength(excerpt) / 1024).toFixed(0)} KB pasted: ${seen.toLocaleString("en")} of ${(sizes.fullRows ?? all).toLocaleString("en")} rows (${pct} %), ~${kTok(promptTokensEst)} tokens${price.in ? `, ~${money(promptTokensEst * price.in)}` : ""}.`);
 let whole = null;
 if (sizes.fullBytes) {
   const fullTok = sizes.fullBytes / BYTES_PER_TOKEN;
