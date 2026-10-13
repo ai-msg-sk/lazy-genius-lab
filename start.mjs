@@ -61,8 +61,39 @@ step("Checking your machine");
 const [maj] = process.versions.node.split(".").map(Number);
 let ready = true;
 ready = (await checkLine("Node.js", async () => [maj >= 18, maj >= 18 ? process.versions.node : `${process.versions.node}, need 18+ (nodejs.org)`])) && ready;
-await checkLine("Python", async () => { const py = py3("python3") ?? py3("python") ?? py3("py", ["-3", "--version"]); return py ? [true, py.replace("Python ", "")] : [null, "not found (optional, used by Round B)"]; });
-await checkLine("Claude Code", async () => { const cc = has("claude", ["--version"], process.platform === "win32" ? { shell: true } : {}); return cc ? [true, cc.split(" ")[0]] : [null, "not installed (optional, see the sheet)"]; });
+const findPy = () => py3("python3") ?? py3("python") ?? py3("py", ["-3", "--version"]);
+const findCC = () => has("claude", ["--version"], process.platform === "win32" ? { shell: true } : {})
+  ?? has(`${process.env.HOME ?? process.env.USERPROFILE}/.local/bin/claude`, ["--version"]); // fresh install, PATH not reloaded yet
+let pyOk = await checkLine("Python", async () => { const py = findPy(); return py ? [true, py.replace("Python ", "")] : [null, "not found (Round B runs Python)"]; });
+let ccOk = await checkLine("Claude Code", async () => { const cc = findCC(); return cc ? [true, cc.split(" ")[0]] : [null, "not installed (the AI agent for Round B)"]; });
+
+// Offer to install what's missing. Always asks first; nothing is installed without "y".
+async function offer(question, how) {
+  if (!isTTY || !process.stdin.isTTY) return false;
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  process.stdout.write("\x1b[?25h");
+  const a = (await rl.question(`      ${c.pink}▸${c.reset} ${question} ${c.grey}[y/N]${c.reset} `).catch(() => "")).trim().toLowerCase();
+  rl.close();
+  if (a !== "y") return false;
+  const { spawnSync } = await import("node:child_process");
+  const r = spawnSync(how[0], how.slice(1), { stdio: "inherit" });
+  return !r.error && r.status === 0;
+}
+if (!ccOk) {
+  const how = process.platform === "win32"
+    ? ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://claude.ai/install.ps1 | iex"]
+    : ["bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash"];
+  if (await offer(`Install Claude Code now? ${c.grey}(official installer from claude.ai, ~1 min)${c.reset}`, how)) {
+    ccOk = await checkLine("Claude Code", async () => { const cc = findCC(); return cc ? [true, `${cc.split(" ")[0]} · open a new terminal if "claude" isn't found`] : [false, "installed, but open a NEW terminal and run node lab.mjs again"]; });
+  }
+}
+if (!pyOk) {
+  const how = process.platform === "win32" ? ["winget", "install", "-e", "--id", "Python.Python.3.13"]
+    : process.platform === "darwin" ? ["xcode-select", "--install"] : null;
+  if (how && await offer(`Install Python 3 now? ${c.grey}(${how.join(" ")})${c.reset}`, how)) {
+    pyOk = await checkLine("Python", async () => { const py = findPy(); return py ? [true, py.replace("Python ", "")] : [null, "finish the installer, then open a NEW terminal"]; });
+  } else if (!how) process.stdout.write(`      ${c.grey}Linux: sudo apt install python3  (or your distro's package)${c.reset}\n`);
+}
 ready = (await checkLine("The Excel", async () => [existsSync("data/openslava-2026-export.xlsx"), "150,000 rows, 6 sheets"])) && ready;
 
 // 3. keys work?
