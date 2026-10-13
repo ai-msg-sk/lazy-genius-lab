@@ -8,6 +8,9 @@ import { createInterface } from "node:readline/promises";
 import { brandLine, banner, step, checkLine, box, c, isTTY } from "./lib/tui.mjs";
 
 const out = (s) => process.stdout.write(s);
+// load the feedback QR now: with --all the folder (and lib/) is gone by the end
+const { showQR } = await import("./lib/qr.mjs");
+await import("./lib/qr-art.mjs");
 const here = process.cwd();
 brandLine("cleanup");
 await banner("BYE", "cleaning up after the lazy genius lab");
@@ -89,3 +92,5 @@ box([
   `${c.white}Thanks for coming. AI writes. Code runs. AI checks.${c.reset}`,
 ], leftovers.length ? c.red : c.green);
 if (!isTTY && leftovers.length) process.exit(1);
+
+await showQR({ seconds: 20 });

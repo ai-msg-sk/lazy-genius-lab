@@ -14,6 +14,7 @@ import {
   brandLine, banner, step, note, thinkPanel, region, frame, panelWidth, revealChecks, scoreBox, nextBox, cmd, showJson,
   spin, wave, mark, c, isTTY, out,
 } from "./lib/tui.mjs";
+import { carouselPanel, writerScenes, checkerScenes } from "./lib/carousel.mjs";
 
 const run = promisify(execFile);
 const writer = process.argv[2] ?? "anthropic/claude-haiku-5.5";
@@ -56,7 +57,7 @@ const t0 = Date.now();
 async function streamed(model, price, prompt, tag, panelOpts) {
   let chars = 0;
   const inTok = Math.round(prompt.length / 3.6);
-  const p = thinkPanel({ model, stats: () => ({ tok: chars / 3.6, cost: inTok * price.in + (chars / 3.6) * price.out }), ...panelOpts });
+  const p = carouselPanel({ model, rows: 8, stats: () => ({ tok: chars / 3.6, cost: inTok * price.in + (chars / 3.6) * price.out }), ...panelOpts });
   const tS = Date.now();
   const r = await askStream(model, prompt, {
     tag, maxTokens: 16000,
@@ -127,7 +128,8 @@ for (let round = 1; round <= MAX; round++) {
       `\nReply with a single \`\`\`python code block only. Keep any thinking short.`,
     `B:write:${round}`,
     {
-      code: file.split("/").pop(), feed: questionLines, feedTitle: "thinking… (the five questions)", thinkTitle: "is thinking",
+      code: file.split("/").pop(), feed: questionLines, feedTitle: "thinking…", thinkTitle: "is thinking",
+      scenes: writerScenes({ task, questions: questionLines }),
       summary: (r) => `    ${c.green}✓${c.reset} ${short(writer)} wrote ${code(r.text).split("\n").length} lines in ${r.secs.toFixed(1)}s ${c.grey}· $${r.cost.toFixed(4)} · ${file}${c.reset}`,
     });
   if (!w.ok) break;
@@ -173,6 +175,7 @@ for (let round = 1; round <= MAX; round++) {
     `B:check:${round}`,
     {
       feed: src.split("\n").filter((l) => l.trim()), feedTitle: "reading the code…", writeTitle: "writing the verdict…",
+      scenes: checkerScenes({ codeLines: src.split("\n").filter((l) => l.trim()), wrong }),
       summary: (r) => `    ${c.green}✓${c.reset} ${short(checker)} reviewed ${wrong} in ${r.secs.toFixed(1)}s ${c.grey}· $${r.cost.toFixed(4)}${c.reset}`,
     });
   const verdict = (ch.text || "").trim().replace(/\s+/g, " ");

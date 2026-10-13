@@ -5,7 +5,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { askStream, priceOf } from "./lib/or.mjs";
 import { check } from "./lib/check.mjs";
-import { brandLine, banner, step, note, bar, thinkPanel, revealChecks, scoreBox, nextBox, cmd, sleep, c, isTTY } from "./lib/tui.mjs";
+import { brandLine, banner, step, note, bar, revealChecks, scoreBox, nextBox, cmd, sleep, wrap, cols, c, isTTY, ASCII } from "./lib/tui.mjs";
+import { carouselPanel, pasteScenes } from "./lib/carousel.mjs";
+import { ROUND_B_PROMPT, copyToClipboard } from "./lib/clipboard.mjs";
 
 const model = process.argv[2] ?? "google/gemini-3.8-flash";
 const excerpt = readFileSync(new URL("./data/paste-excerpt.txt", import.meta.url), "utf8");
@@ -20,11 +22,29 @@ await banner("ROUND A", "let the AI guess · key A");
 step("Copying the spreadsheet into one chat message");
 const nameW = Math.max(...sheets.map((x) => x.name.length));
 for (const x of sheets) await bar(x.name.padEnd(nameW), x.n / x.of, `${`${x.n.toLocaleString("en")} / ${x.of.toLocaleString("en")} rows`.padEnd(20)}${c.grey}${((x.n / x.of) * 100).toFixed(0).padStart(3)} %`, 260);
-note(`${(excerpt.length / 1024).toFixed(0)} KB pasted: ${seen.toLocaleString("en")} of ${all.toLocaleString("en")} rows (${pct} %). That is all that fits in one message.`);
+// Honest sizes: 3 % is our choice for this round, not a hard limit. The real limit is the model's context window.
+const price = await priceOf(model);
+const BYTES_PER_TOKEN = 1.72; // measured: a 281 KB prompt of this spreadsheet = 163,597 tokens
+let sizes = {};
+try { sizes = JSON.parse(readFileSync(new URL("./data/sizes.json", import.meta.url), "utf8")); } catch {}
+const promptTokensEst = Math.round((Buffer.byteLength(task) + Buffer.byteLength(excerpt)) / BYTES_PER_TOKEN);
+const kTok = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : `${Math.round(n / 1000)}k`);
+const money = (n) => `$${n.toFixed(n < 0.1 ? 3 : 2)}`;
+note(`${(excerpt.length / 1024).toFixed(0)} KB pasted: ${seen.toLocaleString("en")} of ${(sizes.fullRows ?? all).toLocaleString("en")} rows (${pct} %), ~${kTok(promptTokensEst)} tokens${price.in ? `, ~${money(promptTokensEst * price.in)}` : ""}.`);
+let whole = null;
+if (sizes.fullBytes) {
+  const fullTok = sizes.fullBytes / BYTES_PER_TOKEN;
+  const maxPct = price.ctx ? Math.min(100, Math.round(((price.ctx / fullTok) * 100) / 5) * 5 || 1) : 0;
+  whole = { tokens: fullTok, ctx: price.ctx, maxPct };
+  let s = `The whole Excel is ${(sizes.fullBytes / 1e6).toFixed(1)} MB ≈ ${kTok(fullTok)} tokens.`;
+  if (price.ctx && price.ctx < fullTok)
+    s += ` ${model} reads at most ${kTok(price.ctx)} tokens (~${maxPct} % of the rows)${price.in ? `, and that would cost ~${money(price.ctx * price.in)} per question` : ""}. It can never see all of it.`;
+  else if (price.ctx)
+    s += ` ${model} could take it all${price.in ? `, for ~${money(fullTok * price.in)} per question` : ""}, and it would still be reading, not counting.`;
+  note(s);
+}
 out("\n");
 
-const price = await priceOf(model);
-const promptTokensEst = Math.round((task.length + excerpt.length) / 1.6); // spreadsheets tokenize badly: ~1.6 chars/token
 const lines = excerpt.split("\n").filter((l) => l.includes("\t"));
 step(`Asking ${c.violet}${model}${c.reset}${c.bold} for the 5 numbers`);
 note(`~${promptTokensEst.toLocaleString("en")} tokens of spreadsheet in one prompt`);
@@ -34,11 +54,15 @@ const t0 = Date.now();
 let reasoningChars = 0, textChars = 0;
 // the prompt cost lands while the model reads (ramped over ~4 s), output cost as tokens stream in
 const costNow = () => promptTokensEst * price.in * Math.min(1, (Date.now() - t0) / 4000) + ((reasoningChars + textChars) / 3.6) * price.out;
-// While the model works silently, the panel shows what it is chewing on: the pasted rows, scrolling by.
-const panel = thinkPanel({
+// While the model works silently, a carousel of scenes (what it sees / doesn't see / money / facts / poll);
+// the moment real reasoning or the answer streams in, the panel shows that instead.
+const outTok = () => (reasoningChars + textChars) / 3.6;
+const panel = carouselPanel({
   model,
-  stats: () => ({ tok: (reasoningChars + textChars) / 3.6, cost: costNow() }),
+  stats: () => ({ tok: outTok(), cost: costNow() }),
   feed: lines,
+  rows: 8,
+  scenes: pasteScenes({ feed: lines, promptTokens: promptTokensEst, whole, tokens: () => promptTokensEst * Math.min(1, (Date.now() - t0) / 4000) + outTok() }),
   feedTitle: "reading your Excel…",
   writeTitle: "writing the answer…",
 });
@@ -87,10 +111,14 @@ const results = check(parsed);
 await revealChecks(results);
 scoreBox({ score: results.filter((r) => r.ok).length, cost: res.cost || costNow(), seconds: secs, round: "A" });
 out(`  ${c.white}The AI saw about ${c.bold}${pct} %${c.reset}${c.white} of the rows and guessed the rest.${c.reset}\n`);
+const copied = copyToClipboard(ROUND_B_PROMPT);
+const promptW = Math.max(30, Math.min(cols() - 18, 76));
 nextBox([
   `1  Write your score and cost on the sheet ${c.grey}(Round A column)${c.reset}`,
   `2  Round B, let the AI write code:`,
-  `     ${cmd("claude")}   ${c.grey}then paste the prompt from your sheet${c.reset}`,
+  `     ${cmd("claude")}   ${c.grey}${copied ? "then paste (Cmd+V / Ctrl+V). Copied to your clipboard:" : "then type this prompt:"}${c.reset}`,
+  ...wrap(ROUND_B_PROMPT, promptW).map((l) => `     ${c.violet}${ASCII ? "|" : "┊"} ${l}${c.reset}`),
+  `     ${c.grey}lost it?${c.reset}  ${cmd("node prompt.mjs")}`,
   `     ${c.grey}No Claude Code?${c.reset}  ${cmd("node 03-orchestrator.mjs")}`,
   ``,
   `${c.grey}A bigger model guessing too?  $ node 02-paste-into-chat.mjs openai/gpt-6.1-sol${c.reset}`,

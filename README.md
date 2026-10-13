@@ -54,6 +54,21 @@ Then `node verify.mjs`. Goal: **5/5 for less than Round A cost you**.
 
 Sonnet and GPT-6.1 Sol eat $0.50 fast. You have been warned.
 
+## All commands
+
+| command | what it does |
+|---|---|
+| `node start.mjs` | unlock your keys with the claim code, check your machine |
+| `node task.mjs` | show the assignment (and open TASK.md in your editor) |
+| `node 02-paste-into-chat.mjs` | Round A: paste the Excel into an AI and let it guess |
+| `claude` / `node 03-orchestrator.mjs` | Round B: let the AI write code |
+| `node prompt.mjs` | copy the Round B prompt to your clipboard again |
+| `node verify.mjs` | check answers.json (at 5/5 it shows the A-vs-B finale) |
+| `node compare.mjs` | the A-vs-B finale: cost, tokens, time, a year in a real team |
+| `node feedback.mjs` | rate the workshop (QR code) |
+| `node show.mjs` | the 30-second intro loop from the projector |
+| `node cleanup.mjs` | delete your keys and everything the lab created |
+
 ## Done? Clean up
 
 ```bash
