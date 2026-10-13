@@ -217,3 +217,4 @@ if (score === 5 && process.env.LAB_NO_FINALE) {
   `Not there yet: ask the AI to fix the ✗ questions, then  ${cmd("node verify.mjs")}`,
   `Or retry the loop:  ${cmd("node 03-orchestrator.mjs")}`,
 ]);
+process.exitCode = score === 5 ? 0 : 1; // lab.mjs ticks Round B only at 5/5

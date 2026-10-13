@@ -18,7 +18,7 @@ const node = (file, args = [], env = {}) => spawnSync(process.execPath, [path.jo
 const score = () => { try { return check(JSON.parse(readFileSync(findAnswers(), "utf8"))).filter((r) => r.ok).length; } catch { return null; } };
 
 const STEPS = [
-  { id: "start", title: "Unlock your keys", time: "2 min", why: "type the claim code from your sheet", run: () => node("start.mjs"), done: () => existsSync(path.join(ROOT, ".env")) },
+  { id: "start", title: "Unlock your keys", time: "2 min", why: "type the claim code from your sheet", run: () => node("start.mjs") },
   { id: "excel", title: "Look at the data", time: "5 min", why: "open the Excel and spot 5 traps yourself", run: () => node("excel.mjs") },
   { id: "task", title: "Read the task", time: "2 min", why: "the five numbers the organizers need", run: () => node("task.mjs") },
   { id: "roundA", title: "Round A · let the AI guess", time: "15 min", why: "paste the Excel into an AI (key A)", run: () => node("02-paste-into-chat.mjs") },
@@ -50,7 +50,10 @@ async function roundB() {
     out(`\n  ${c.yellow}Claude Code isn't installed here, so the orchestrator runs instead.${c.reset}\n`);
     return node("03-orchestrator.mjs", [], { LAB_NO_FINALE: "1" });
   }
-  return 0;
+  const sc = score();
+  out(sc === 5 ? `\n  ${c.green}${c.bold}✓ 5/5.${c.reset} ${c.grey}Round B done.${c.reset}\n`
+    : `\n  ${c.yellow}${sc === null ? "No my-work/answers.json yet." : `${sc}/5 so far.`}${c.reset} ${c.grey}Run step 5 again to keep going.${c.reset}\n`);
+  return sc === 5 ? 0 : 1;
 }
 
 const p = load();
@@ -76,7 +79,15 @@ if (!isTTY || !process.stdin.isTTY) {
 }
 
 const CLEAR = "\x1b[2J\x1b[3J\x1b[H"; // clear screen + scrollback, cursor home: every view starts at the top
+// Keys pressed while a step was busy (e.g. Enter while the model thinks) must not skip the next screen.
+const drain = () => new Promise((res) => {
+  if (!process.stdin.isTTY) return res();
+  const sink = () => {};
+  process.stdin.setRawMode(true); process.stdin.resume(); process.stdin.on("data", sink);
+  setTimeout(() => { process.stdin.off("data", sink); process.stdin.pause(); process.stdin.setRawMode(false); res(); }, 150);
+});
 const pause = async (msg) => {
+  await drain();
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   out("\x1b[?25h");
   await rl.question(`\n  ${c.pink}▸${c.reset} ${c.bold}Enter${c.reset} ${c.grey}${msg}${c.reset} `).catch(() => "");
@@ -142,8 +153,8 @@ for (;;) {
   const s = STEPS[i];
   out(CLEAR + `  ${c.pink}━━ step ${i + 1} of ${STEPS.length} · ${s.title} ━━${c.reset}\n\x1b[?25h`);
   const status = await s.run();
+  if (s.id === "cleanup" && !existsSync(path.join(ROOT, "lab.mjs"))) { out(`\n  ${c.grey}Lab folder deleted. Type${c.reset} ${cmd("cd ..")}\n\x1b[?25h`); break; } // don't recreate it
   if (status === 0 && !p.done.includes(s.id)) { p.done.push(s.id); save(p); }
-  if (s.id === "cleanup" && !existsSync(ROOT)) break; // the whole folder was deleted
   // let them read what the step printed before the menu replaces it
   const after = STEPS.findIndex((x) => !isDone(x));
   await pause(after < 0 ? "= back to your lab" : `= back to your lab · next: ${STEPS[after].title}`);

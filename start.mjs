@@ -21,7 +21,10 @@ const get = (n) => env.match(new RegExp(`^${n}=(.+)$`, "m"))?.[1].trim();
 let A = get("OPENROUTER_KEY_A"), B = get("OPENROUTER_KEY_B");
 // The sheet has a short claim code; it unlocks your two keys from data/keys.sealed.json locally.
 function unseal(input) {
-  const code = input.toUpperCase().replace(/\s+/g, "");
+  // forgiving: "047 spiš 2j5x", "047spis2j5x" and "047-SPIS-2J5X" are the same code
+  const flat = input.normalize("NFD").replace(/\p{M}/gu, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const m = flat.match(/^(\d{3})([A-Z]+)([A-Z0-9]{4})$/);
+  const code = m ? `${m[1]}-${m[2]}-${m[3]}` : flat;
   const sealed = JSON.parse(readFileSync("data/keys.sealed.json", "utf8"))[code.slice(0, 3)];
   if (!sealed) throw new Error("unknown seat");
   const k = scryptSync(code, Buffer.from(sealed.salt, "base64"), 32, { N: 2 ** 14, r: 8, p: 1 });
@@ -31,20 +34,20 @@ function unseal(input) {
 }
 let input = process.argv[2], code = null;
 if (!A || !B || input) {
-  if (!input) {
-    if (process.stdin.isTTY) {
+  const ask = !input && process.stdin.isTTY;
+  for (let tries = ask ? 3 : 1; tries > 0; tries--) {
+    if (ask) {
       const rl = createInterface({ input: process.stdin, output: process.stdout });
       if (isTTY) out("\x1b[?25h");
-      input = await rl.question(`  ${c.pink}▸${c.reset} ${c.bold}Claim code from your sheet${c.reset} ${c.grey}(e.g. 012-DUNAJ-K7QX)${c.reset}: `);
+      input = await rl.question(`  ${c.pink}▸${c.reset} ${c.bold}Claim code from your sheet${c.reset} ${c.grey}(e.g. 012-DUNAJ-K7QX)${c.reset}: `).catch(() => "");
       rl.close();
       if (isTTY) out("\x1b[?25l");
-    } else input = readFileSync(0, "utf8").split("\n")[0];
-  }
-  try {
-    ({ A, B, code } = unseal(input));
-  } catch {
-    out(`\n    ${c.red}${c.bold}✗ That code does not open any seat.${c.reset} ${c.grey}Check for typos or raise your hand.${c.reset}\n\n`);
-    process.exit(1);
+    } else if (!input) input = readFileSync(0, "utf8").split("\n")[0];
+    try { ({ A, B, code } = unseal(input)); break; }
+    catch {
+      out(`    ${c.red}${c.bold}✗ ${input.trim() || "(empty)"} does not open any seat.${c.reset} ${c.grey}${tries > 1 ? `Check for typos (${tries - 1} ${tries - 1 === 1 ? "try" : "tries"} left).` : "Raise your hand."}${c.reset}\n`);
+      if (tries === 1) process.exit(1);
+    }
   }
   out("\n");
   step("Unlocking your seat");
@@ -131,4 +134,4 @@ if (ready) nextBox([
   `2  Read the task (2 min):     ${cmd("node task.mjs")}`,
   `3  Round A:                   ${cmd("node 02-paste-into-chat.mjs")}`,
 ]);
-else box([`${c.red}${c.bold}Something is missing.${c.reset} Fix the ✗ above or raise your hand.`], c.red);
+else { box([`${c.red}${c.bold}Something is missing.${c.reset} Fix the ✗ above or raise your hand.`], c.red); process.exitCode = 2; }
