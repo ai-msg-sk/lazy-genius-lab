@@ -1,7 +1,6 @@
 // Look at the data before you ask anyone (or anything) about it.
-// Opens the Excel in your spreadsheet app and runs a 5-minute "spot the traps" hunt in the terminal.
-// Usage: node excel.mjs            (open + hunt)
-//        node excel.mjs --no-open  (hunt only)
+// A 5-minute "spot the traps" hunt. Opens the Excel only if you ask (o), or peeks at it here (p).
+// Usage: node excel.mjs
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline/promises";
@@ -13,11 +12,37 @@ const XLSX = path.join(ROOT, "data", "openslava-2026-export.xlsx");
 const hunt = JSON.parse(readFileSync(path.join(ROOT, "data", "hunt.json"), "utf8"));
 await brandLine("look at the data first");
 
-// 1. open it (Excel / Numbers / LibreOffice: whatever owns .xlsx)
-if (!process.argv.includes("--no-open")) {
+// Open the Excel only when asked: in your spreadsheet app, or a quick peek right here.
+function openXlsx() {
   const [bin, args] = process.platform === "darwin" ? ["open", [XLSX]] : process.platform === "win32" ? ["cmd", ["/c", "start", "", XLSX]] : ["xdg-open", [XLSX]];
   try { spawn(bin, args, { detached: true, stdio: "ignore", windowsHide: true }).on("error", () => {}).unref(); } catch {}
-  out(`\n  ${c.green}✓${c.reset} Opened ${c.white}data/openslava-2026-export.xlsx${c.reset} ${c.grey}(no spreadsheet app? the hints below show the rows anyway)${c.reset}\n`);
+  out(`  ${c.green}✓${c.reset} ${c.grey}Opening data/openslava-2026-export.xlsx in your spreadsheet app…${c.reset}\n`);
+}
+function peek() {
+  const W = Math.max(60, (process.stdout.columns || 100) - 6);
+  const blocks = readFileSync(path.join(ROOT, "data", "preview.txt"), "utf8").split(/\n(?=### )/);
+  for (const b of blocks) {
+    const [head, ...rows] = b.trim().split("\n");
+    out(`\n  ${c.pink}${c.bold}${head.replace(/^### /, "")}${c.reset}\n`);
+    const cells = rows.filter((r) => r.includes("\t")).map((r) => r.split("\t"));
+    const n = Math.max(...cells.map((r) => r.length));
+    const width = Array.from({ length: n }, (_, i) => Math.min(22, Math.max(...cells.map((r) => (r[i] ?? "").length))));
+    for (const [k, r] of cells.entries()) {
+      let line = r.map((v, i) => (v ?? "").slice(0, width[i]).padEnd(width[i])).join(` ${c.grey}│${c.reset} `);
+      out(`  ${k === 0 ? c.bold : ""}${line.slice(0, W + 40)}${c.reset}\n`);
+    }
+  }
+}
+if (isTTY && process.stdin.isTTY) {
+  for (;;) {
+    const rl0 = createInterface({ input: process.stdin, output: process.stdout });
+    out("\x1b[?25h");
+    const a = (await rl0.question(`\n  ${c.pink}▸${c.reset} ${c.white}${c.bold}o${c.reset} ${c.grey}open the Excel in your app${c.reset}   ${c.white}${c.bold}p${c.reset} ${c.grey}peek at the sheets here${c.reset}   ${c.white}${c.bold}Enter${c.reset} ${c.grey}start the hunt${c.reset}  `).catch(() => "")).trim().toLowerCase();
+    rl0.close();
+    if (a === "o") openXlsx();
+    else if (a === "p") peek();
+    else break;
+  }
 }
 
 out(`\n  ${c.white}${c.bold}Spot the traps.${c.reset} ${c.grey}5 things a human notices in seconds and a model has to guess from 3 % of the rows.${c.reset}\n`);

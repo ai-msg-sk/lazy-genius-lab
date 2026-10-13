@@ -14,7 +14,17 @@ cd lazy-genius-lab
 node lab.mjs
 ```
 
-`node lab.mjs` walks you through every step (Enter = next) and remembers where you are.
+`node lab.mjs` walks you through every step and remembers where you are.
+
+| key | in the lab menu | inside a step |
+|---|---|---|
+| **↑ ↓** | choose a step | |
+| **Enter** | start it | continue / back to the menu |
+| **q** | quit (progress is saved) | |
+| **o** | | open the file in its app (the Excel, TASK.md) |
+| **p** / **f** | | peek at the sheets here / full rules here |
+
+Nothing opens by itself: files open only when you press **o**.
 
 It asks for the **claim code** on your card (e.g. `012-DUNAJ-K7QX`), unlocks your two keys locally,
 checks your machine and both keys, and points Claude Code in this folder at key B.

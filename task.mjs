@@ -1,7 +1,6 @@
 // Shows the assignment on ONE screen (story, five questions, top traps) and opens the full TASK.md in an editor.
-// Usage: node task.mjs            (summary + open TASK.md)
+// Usage: node task.mjs            (summary; then f = full rules here, o = open TASK.md in an editor)
 //        node task.mjs --full     (print the whole TASK.md here)
-//        node task.mjs --no-open  (don't open the editor)
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { brandLine, nextBox, cmd, c, isTTY } from "./lib/tui.mjs";
@@ -31,28 +30,41 @@ if (!process.argv.includes("--full")) {
   ${c.grey}Answers go to${c.reset} ${c.violet}my-work/answers.json${c.reset}${c.grey}; ${c.reset}${c.violet}node verify.mjs${c.reset} ${c.grey}tells you right or wrong per number.${c.reset}
 `);
 }
-let fence = false;
-for (const raw of process.argv.includes("--full") ? md.split("\n") : []) {
-  const line = raw.replace(/\r$/, "");
-  if (line.startsWith("```")) { fence = !fence; continue; }
-  if (fence) { out(`    ${c.grey}${line}${c.reset}\n`); continue; }
-  if (/^# /.test(line)) out(`\n  ${c.pink}${c.bold}${line.slice(2).toUpperCase()}${c.reset}\n`);
-  else if (/^## /.test(line)) out(`\n  ${c.pink}${c.bold}▸ ${line.slice(3)}${c.reset}\n`);
-  else if (/^\|[-| ]+\|$/.test(line)) continue;
-  else if (line.startsWith("|")) {
-    const cells = line.split("|").slice(1, -1).map((x) => x.trim());
-    out(`    ${cells.map((x, i) => inline(i === 0 ? x.padEnd(16) : x)).join(`${c.grey}  ·  ${c.reset}`)}\n`);
-  } else out(line ? `  ${inline(line)}\n` : "\n");
+function printFull() {
+  let fence = false;
+  for (const raw of md.split("\n")) {
+    const line = raw.replace(/\r$/, "");
+    if (line.startsWith("```")) { fence = !fence; continue; }
+    if (fence) { out(`    ${c.grey}${line}${c.reset}\n`); continue; }
+    if (/^# /.test(line)) out(`\n  ${c.pink}${c.bold}${line.slice(2).toUpperCase()}${c.reset}\n`);
+    else if (/^## /.test(line)) out(`\n  ${c.pink}${c.bold}▸ ${line.slice(3)}${c.reset}\n`);
+    else if (/^\|[-| ]+\|$/.test(line)) continue;
+    else if (line.startsWith("|")) {
+      const cells = line.split("|").slice(1, -1).map((x) => x.trim());
+      out(`    ${cells.map((x, i) => inline(i === 0 ? x.padEnd(16) : x)).join(`${c.grey}  ·  ${c.reset}`)}\n`);
+    } else out(line ? `  ${inline(line)}\n` : "\n");
+  }
+}
+// TextEdit on macOS, Notepad on Windows, the default app on Linux. Only when asked.
+function openInEditor() {
+  const p = decodeURIComponent(file.pathname).replace(/^\/([A-Za-z]:)/, "$1");
+  const [bin, args] = process.platform === "darwin" ? ["open", ["-e", p]] : process.platform === "win32" ? ["notepad", [p]] : ["xdg-open", [p]];
+  try { spawn(bin, args, { detached: true, stdio: "ignore" }).on("error", () => {}).unref(); } catch {}
+  out(`  ${c.green}✓${c.reset} ${c.grey}Opened TASK.md in your text editor.${c.reset}\n`);
 }
 
-if (!process.argv.includes("--no-open")) {
-  // TextEdit on macOS, Notepad on Windows, the default app on Linux.
-  const p = decodeURIComponent(file.pathname).replace(/^\/([A-Za-z]:)/, "$1");
-  const [bin, args] = process.platform === "darwin" ? ["open", ["-e", p]]
-    : process.platform === "win32" ? ["notepad", [p]]
-    : ["xdg-open", [p]];
-  try { spawn(bin, args, { detached: true, stdio: "ignore" }).on("error", () => {}).unref(); } catch {}
-  if (isTTY) out(`  ${c.green}✓${c.reset} ${c.grey}Opened the full TASK.md in your text editor.${c.reset}\n`);
+if (process.argv.includes("--full")) printFull();
+else if (isTTY && process.stdin.isTTY) {
+  const { createInterface } = await import("node:readline/promises");
+  for (;;) {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    out("\x1b[?25h");
+    const a = (await rl.question(`\n  ${c.pink}▸${c.reset} ${c.white}${c.bold}f${c.reset} ${c.grey}full rules here${c.reset}   ${c.white}${c.bold}o${c.reset} ${c.grey}open TASK.md in your editor${c.reset}   ${c.white}${c.bold}Enter${c.reset} ${c.grey}continue${c.reset}  `).catch(() => "")).trim().toLowerCase();
+    rl.close();
+    if (a === "f") printFull();
+    else if (a === "o") openInEditor();
+    else break;
+  }
 }
 
 nextBox([`Round A, let the AI guess:  ${cmd("node 02-paste-into-chat.mjs")}`, `${c.grey}Haven't looked at the data yet?${c.reset}  ${cmd("node excel.mjs")}`]);
