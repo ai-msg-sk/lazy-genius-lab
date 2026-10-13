@@ -9,6 +9,6 @@ use data/preview.txt to see the layout).
 - Money is integer cents. Parsing rules come from TASK.md, not from guesses.
 - Before trusting a result, test the edge cases TASK.md lists (duplicates, badge formats, star formats, rating time, storno/TEST, back-to-back bookings).
 - When you report a number, say which command produced it.
-- Write answers.json and run `node verify.mjs`. Do not try to reverse the hashes in answers.hashes.json.
+- Save everything you create in `my-work/` (scripts, notes). Write the answers to `my-work/answers.json` and run `node verify.mjs`. Do not try to reverse the hashes in answers.hashes.json.
 - Budget is $0.50: keep context small, don't paste data into the conversation.
 - On Windows, if `python` prints "Python was not found", use `py -3` instead.

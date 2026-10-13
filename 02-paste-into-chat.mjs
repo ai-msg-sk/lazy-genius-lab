@@ -3,6 +3,7 @@
 // of every sheet (data/paste-excerpt.txt, one "### <sheet> (first N of M rows)" section per sheet).
 // Usage: node 02-paste-into-chat.mjs [model=google/gemini-3.8-flash]
 import { readFileSync, writeFileSync, statSync } from "node:fs";
+import { ANSWERS, ensureWork } from "./lib/paths.mjs";
 import { askStream, priceOf } from "./lib/or.mjs";
 import { check } from "./lib/check.mjs";
 import { brandLine, banner, step, note, bar, revealChecks, scoreBox, nextBox, cmd, sleep, wrap, cols, c, isTTY, ASCII } from "./lib/tui.mjs";
@@ -111,7 +112,7 @@ for (const ch of json) { out(`${c.white}${ch === "\n" ? "\n    " : ch}${c.reset}
 out("\n\n");
 
 let parsed = null;
-try { parsed = JSON.parse(json); writeFileSync("answers.json", json); } catch {}
+try { parsed = JSON.parse(json); ensureWork(); writeFileSync(ANSWERS, json); } catch {}
 if (!parsed) {
   out(`  ${c.red}The answer is not valid JSON, so nothing to check.${c.reset}\n`);
   nextBox([`Try again or another model:  ${cmd("node 02-paste-into-chat.mjs")}`, `Or move on to Round B:  ${cmd("claude")}  ${c.grey}or${c.reset}  ${cmd("node 03-orchestrator.mjs")}`]);

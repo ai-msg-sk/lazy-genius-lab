@@ -18,7 +18,7 @@ All you have is the ops export everyone dumped into one Excel:
 
 ## The five numbers
 
-Write `answers.json`:
+Write `my-work/answers.json`:
 
 ```json
 {

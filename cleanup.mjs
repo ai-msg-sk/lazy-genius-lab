@@ -1,6 +1,7 @@
-// End of the lab: removes your keys and everything the lab created on this machine, then proves it.
-// Usage: node cleanup.mjs          (keys + lab files, then the feedback QR)
-//        node cleanup.mjs --all    (also deletes the whole lab folder)
+// End of the lab: removes your KEYS (always) and proves none are left. Your work in my-work/ stays
+// unless you type "delete" when asked (Enter or 20 s of silence = keep). Then the feedback QR.
+// Usage: node cleanup.mjs          (keys only, asks about the rest)
+//        node cleanup.mjs --all    (also deletes the whole lab folder, no question)
 import { existsSync, rmSync, readdirSync, statSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -25,13 +26,10 @@ const ccHistory = (() => {
 const targets = [
   [".env", "your two API keys"],
   [".claude/settings.local.json", "Claude Code → key B wiring"],
-  ["answers.json", "your answers"],
-  ["runs.jsonl", "request log"],
-  ["generated", "code written by the orchestrator"],
-  [ccHistory, "Claude Code history for this folder"],
+  [ccHistory, "Claude Code history for this folder (it may contain the keys)"],
 ];
 
-step("Removing keys and lab files");
+step("Removing your keys");
 for (const [p, what] of targets) {
   const shown = p.startsWith(homedir()) ? p.replace(homedir(), "~") : p;
   await checkLine(`${what}  ${c.grey}${shown}${c.reset}`, async () => {
@@ -59,8 +57,21 @@ await checkLine("scanning files for sk-or-v1-…", async () => {
   return leftovers.length ? [false, `still found in: ${leftovers.join(", ")}`] : [true, "0 keys found"];
 });
 
-// No questions: the keys and lab files are gone above; the whole folder only with --all.
-const removeAll = process.argv.includes("--all");
+// Your work (my-work/, the Excel, the scripts) is yours to keep. Deleting it needs the word "delete".
+let removeAll = process.argv.includes("--all");
+if (!removeAll && process.stdin.isTTY) {
+  out(`\n  ${c.green}✓${c.reset} Your work stays: ${c.white}my-work/${c.reset} ${c.grey}(answers, your Round B programs, badge, receipts)${c.reset}\n`);
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  if (isTTY) out("\x1b[?25h");
+  const answer = await Promise.race([
+    rl.question(`  ${c.pink}▸${c.reset} ${c.bold}Delete the whole lab folder too?${c.reset} ${c.grey}Type${c.reset} ${c.white}delete${c.reset} ${c.grey}to confirm, Enter to keep (20 s):${c.reset} `).catch(() => ""), // Ctrl+D / Ctrl+C = keep
+    new Promise((r) => setTimeout(() => r(""), 20_000)),
+  ]);
+  rl.close();
+  if (isTTY) out("\x1b[?25l");
+  removeAll = answer.trim().toLowerCase() === "delete";
+  if (!removeAll) out(`  ${c.grey}Kept. Your lab folder and my-work/ are still there.${c.reset}\n`);
+}
 if (removeAll) {
   out("\n");
   await checkLine(`lab folder  ${c.grey}${here.replace(homedir(), "~")}${c.reset}`, async () => {

@@ -51,7 +51,9 @@ if (!A || !B || input) {
   await decode(code, c.pink);
 }
 A = A.trim(); B = B.trim();
-writeFileSync(".env", `OPENROUTER_KEY_A=${A}\nOPENROUTER_KEY_B=${B}\n`);
+const seat = (code ?? get("LAB_SEAT") ?? "").slice(0, 3);
+writeFileSync(".env", `OPENROUTER_KEY_A=${A}\nOPENROUTER_KEY_B=${B}\n${/^\d{3}$/.test(seat) ? `LAB_SEAT=${seat}\n` : ""}`);
+mkdirSync("my-work/round-b", { recursive: true }); // everything you make goes here
 
 // 2. machine
 out("\n");

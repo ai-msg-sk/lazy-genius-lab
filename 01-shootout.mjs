@@ -73,7 +73,7 @@ const totalCost = results.reduce((s, x) => s + x.res.cost, 0);
 box([
   `${c.grey}Total spent${c.reset}  ${c.yellow}${c.bold}${usd(totalCost)}${c.reset}`,
   `The deterministic version: 4 lines of code, $0, 100 % every time.`,
-  `${c.grey}Wrong answers are in runs.jsonl. Look at how ${c.reset}${c.italic}confidently${c.reset}${c.grey} wrong they are.${c.reset}`,
+  `${c.grey}Wrong answers are in my-work/receipts.jsonl. Look at how ${c.reset}${c.italic}confidently${c.reset}${c.grey} wrong they are.${c.reset}`,
   ``,
   `Next:  ${cmd("node 02-paste-into-chat.mjs")}`,
 ]);

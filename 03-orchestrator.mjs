@@ -4,10 +4,12 @@
 //   tests         -> verify.mjs logic: right/wrong per question (the tests decide, not a reviewer)
 //   checker model -> only if a test fails: finds the bug for the failing rules (different vendor)
 // Usage: node 03-orchestrator.mjs [writer] [checker]
-// Generated code runs on your laptop. Read it (generated/) before you trust it.
+// Generated code runs on your laptop. Read it (my-work/round-b/) before you trust it.
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
+import path from "node:path";
+import { ANSWERS, ROUND_B, ensureWork, rel } from "./lib/paths.mjs";
 import { askStream, priceOf } from "./lib/or.mjs";
 import { check, QUESTIONS } from "./lib/check.mjs";
 import {
@@ -22,7 +24,7 @@ const checker = process.argv[3] ?? "openai/gpt-6-luna-pro";
 const task = readFileSync(new URL("./TASK.md", import.meta.url), "utf8");
 const preview = readFileSync(new URL("./data/preview.txt", import.meta.url), "utf8");
 const MAX = 4;
-mkdirSync("generated", { recursive: true });
+ensureWork();
 const short = (m) => m.split("/").pop();
 // Pull the Python out of the reply: a fenced block (closed or not, \n or \r\n), else the whole reply minus stray fences.
 const code = (s) => {
@@ -121,12 +123,12 @@ function runPanel(file) {
 let results = null, score = 0;
 for (let round = 1; round <= MAX; round++) {
   step(`Attempt ${round} of ${MAX}`);
-  const file = `generated/solve-r${round}.py`;
+  const file = rel(path.join(ROUND_B, `solve-r${round}.py`));
   const w = await streamed(writer, pw,
     `${task}\n\nFirst rows of each sheet (tab-separated):\n${preview}\n\n` +
       `Write ONE Python 3 program using only the standard library (zipfile, re, xml, json, collections, datetime). ` +
       `It reads data/openslava-2026-export.xlsx (inline strings: <c t="inlineStr"><is><t>, numbers: <v>), ` +
-      `computes the five answers exactly as specified and writes answers.json. Use integer cents for money. ` +
+      `computes the five answers exactly as specified and writes my-work/answers.json. Use integer cents for money. ` +
       `TASK.md has an "Edge cases" section listing every trap present in the data: handle each one. ` +
       `Your program is judged by tests (the verify step), not by a reviewer.` +
       (feedback ? `\n\nYour previous attempt failed:\n${feedback}` : "") +
@@ -140,7 +142,7 @@ for (let round = 1; round <= MAX; round++) {
   if (!w.ok) break;
   if (!w.text.trim()) { feedback = "You returned no code. Think less, write the program."; note(`${c.yellow}no code returned, asking again${c.reset}`); out("\n"); continue; }
   writeFileSync(file, code(w.text));
-  rmSync("answers.json", { force: true });
+  rmSync(ANSWERS, { force: true });
 
   // 2. run it
   const ran = await runPanel(file);
@@ -152,7 +154,7 @@ for (let round = 1; round <= MAX; round++) {
     feedback = `It crashed:\n${String(ran.stderr || ran.signal || "").slice(-1500)}`;
     continue;
   }
-  if (!existsSync("answers.json")) {
+  if (!existsSync(ANSWERS)) {
     out(`    ${c.red}✗ ran in ${ran.secs.toFixed(1)}s but wrote no answers.json${c.reset}\n    ${c.grey}→ telling the writer${c.reset}\n\n`);
     feedback = "It ran but did not write answers.json.";
     continue;
@@ -161,7 +163,7 @@ for (let round = 1; round <= MAX; round++) {
 
   // 3. test first
   let answers;
-  try { answers = JSON.parse(readFileSync("answers.json", "utf8")); }
+  try { answers = JSON.parse(readFileSync(ANSWERS, "utf8")); }
   catch { out(`    ${c.red}✗ answers.json is not valid JSON${c.reset}\n\n`); feedback = "answers.json is not valid JSON."; continue; }
   results = check(answers);
   score = results.filter((r) => r.ok).length;
@@ -191,17 +193,17 @@ for (let round = 1; round <= MAX; round++) {
 
 // After the last attempt: always the reveal, the score and what to do next.
 const secs = (Date.now() - t0) / 1000;
-if (!existsSync("answers.json") || !results) {
+if (!existsSync(ANSWERS) || !results) {
   out(`\n  ${c.red}No answers.json produced.${c.reset}\n`);
   scoreBox({ score: 0, cost: spent, seconds: secs, round: "B" });
   nextBox([`Not there yet: try again  ${cmd("node 03-orchestrator.mjs")}`, `${c.grey}or use Claude Code:${c.reset}  ${cmd("claude")}`]);
   process.exit(1);
 }
-step("answers.json");
-showJson(JSON.parse(readFileSync("answers.json", "utf8")));
+step("my-work/answers.json");
+showJson(JSON.parse(readFileSync(ANSWERS, "utf8")));
 out("\n");
 step("Checking against the real numbers");
-results = check(JSON.parse(readFileSync("answers.json", "utf8")));
+results = check(JSON.parse(readFileSync(ANSWERS, "utf8")));
 score = results.filter((r) => r.ok).length;
 await revealChecks(results);
 scoreBox({ score, cost: spent, seconds: secs, round: "B" });

@@ -40,7 +40,7 @@ It saves the answer and runs `verify.mjs` for you. Watch the cost line.
 Pick one:
 
 - **Claude Code**: run `claude` in this folder and paste:
-  > Read TASK.md and CLAUDE.md. Write a Python script that computes the five answers from data/openslava-2026-export.xlsx and writes answers.json. Run it, then run node verify.mjs, and fix it until it says 5/5.
+  > Read TASK.md and CLAUDE.md. Write a Python script that computes the five answers from data/openslava-2026-export.xlsx and writes my-work/answers.json. Run it, then run node verify.mjs, and fix it until it says 5/5.
 - **Any other agent** (Cursor, Codex, Aider): use key B with base URL `https://openrouter.ai/api/v1`.
 - **No agent**: `node 03-orchestrator.mjs` (Haiku writes Python, your laptop runs it, GPT-6 Luna reviews).
 
@@ -63,7 +63,7 @@ Sonnet and GPT-6.1 Sol eat $0.50 fast. You have been warned.
 | `node 02-paste-into-chat.mjs` | Round A: paste the Excel into an AI and let it guess |
 | `claude` / `node 03-orchestrator.mjs` | Round B: let the AI write code |
 | `node prompt.mjs` | copy the Round B prompt to your clipboard again |
-| `node verify.mjs` | check answers.json (at 5/5 it shows the A-vs-B finale) |
+| `node verify.mjs` | check my-work/answers.json (at 5/5 it shows the A-vs-B finale) |
 | `node compare.mjs` | the A-vs-B finale: cost, tokens, time, a year in a real team |
 | `node feedback.mjs` | rate the workshop (QR code) |
 | `node show.mjs` | the 30-second intro loop from the projector |
@@ -80,10 +80,10 @@ and asks whether to delete the whole folder. Your keys stop working tonight at 2
 
 ## Receipts
 
-Every call is logged in `runs.jsonl` (model, tokens, reasoning tokens, cost, latency).
+Everything you make lands in **`my-work/`**: `answers.json`, the Round B programs (`round-b/`), `badge.html`, and `receipts.jsonl` (model, tokens, reasoning tokens, cost and time of every AI call).
 
 ```bash
-node -e "const r=require('fs').readFileSync('runs.jsonl','utf8').trim().split('\n').map(JSON.parse);const by={};for(const x of r){const k=x.tag.split(':')[0];by[k]=(by[k]||0)+x.cost}console.table(by)"
+node -e "const r=require('fs').readFileSync('my-work/receipts.jsonl','utf8').trim().split('\n').map(JSON.parse);const by={};for(const x of r){const k=x.tag.split(':')[0];by[k]=(by[k]||0)+x.cost}console.table(by)"
 ```
 
 ## ElevenLabs (workshop partner)
