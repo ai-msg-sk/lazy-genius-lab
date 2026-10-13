@@ -1,0 +1,49 @@
+### Program (60 rows)
+OpenSlava 2026 – program (export z Notion, neupravovať!!)
+
+ID	Názov	Speaker	Miestnosť	Deň	Začiatok	Koniec
+T01	eBPF the hard way	Filip Hric	Room 1	14.10.2026	09:00	09:45
+T02	Observability under audit	Ján Koreň	Room 1	14.10.2026	10:00	10:45
+T03	Go under audit	Nikola Žák	Room 1	14.10.2026	11:00	11:45
+T04	Observability under audit (part 2)	Matej Lukáč	Room 1	14.10.2026	13:00	13:45
+T05	eBPF after the incident	Lenka Vincze	Room 1	14.10.2026	14:00	14:45
+
+### Registrácie (7131 rows)
+reg_id	Meno	E-mail	Firma	Lístok	Registrovaný	Poznámka
+R03524	Katarína Szabóová	katarina.szaboova@azet.sk	-	Študent	23.8.2026 17:35	
+R00664	Zuzana Hudáková	zuzana.hudakova@accenture.com	Accenture	Speaker	31.8.2026 7:07	
+R00136	Tomáš Mikuš	tomas.mikus@accenture.com	Accenture	regular	2026-09-28 22:58	platba prevodom
+R00182	JAKUB ŽÁK	 jakub.zak@azet.sk 	-	student	2026-08-23 22:27	
+R00113	Hudáková, Petra	PETRA.HUDAKOVA@PANTHEON.SK	Pantheon	STUDENT	4.10.2026 7:49	
+
+### Vstupy (30322 rows)
+Čas skenu	Brána	Badge	Deň
+14.10.2026 07:00:01	C	R05838	Deň 1
+14.10.2026 07:00:04	A	R00713	Deň 1
+14.10.2026 07:00:06	B	R04436	Deň 1
+14.10.2026 07:00:06	A	R06166	Deň 1
+14.10.2026 07:00:07	C	R05193	Deň 1
+
+### Hodnotenia (40687 rows)
+Odoslané	Prednáška	Hodnotenie	Badge	Komentár
+2026-10-14T16:29:18	OpenTelemetry for insurance	3,0	R06901	
+2026-10-14T15:08:02	Micro-frontends for insurance	3	R06296	couldn't hear the speaker
+14.10.2026 15:38:37	T09	3	matej.toth@ness.com	
+14.10.2026 11:01:09	T08	★★★★☆	R05663	
+14.10.2026 20:25:51	T07	4	R04450	too hot in the room
+
+### Catering (51052 rows)
+Čas	Stánok	Položka	Ks	Cena/ks	Badge
+13.10.2026 07:02:05	TEST	Flat white	1	3,40 €	STAFF-01
+13.10.2026 07:05:46	TEST	Cappuccino	1	3.1	STAFF-01
+13.10.2026 07:11:08	TEST	Club-Mate	1	3.50	STAFF-01
+13.10.2026 07:12:20	TEST	Espresso	1	2,20 €	STAFF-01
+13.10.2026 07:13:33	TEST	Espresso	1	2.2	STAFF-01
+
+### Office planning (21744 rows)
+ID	Typ	Miestnosť	Od	Do	Kto	Stav	Poznámka
+P018347	Úloha	Poprad	1.9.2026 12:30	2026-09-01 18:00	Jakub	Zrušené	upratanie
+P002036	rezervacia	Ipeľ	2026-02-11 15:30	11.2.2026 17:30	HR	potvrdene	
+P007180	Rezervácia	Open space B	28.5.2026 10:00	28.5.2026 12:00	IT	Potvrdené	
+P010858	Rezervácia	Open space A	12.8.2026 11:30	12.8.2026 12:30	Peter	Potvrdené	standup
+P004283	Rezervácia	gerlach	31.3.2026 9:30	2026-03-31 10:00	Lucia	OK	
