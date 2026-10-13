@@ -53,6 +53,15 @@ Then `node verify.mjs`. Goal: **5/5 for less than Round A cost you**.
 
 Sonnet and GPT-6.1 Sol eat $0.50 fast. You have been warned.
 
+## Done? Clean up
+
+```bash
+node cleanup.mjs
+```
+
+Deletes your keys, the Claude Code wiring, your answers and generated code, scans the folder for any leftover key,
+and asks whether to delete the whole folder. Your keys stop working tonight at 23:59 anyway.
+
 ## Receipts
 
 Every call is logged in `runs.jsonl` (model, tokens, reasoning tokens, cost, latency).
