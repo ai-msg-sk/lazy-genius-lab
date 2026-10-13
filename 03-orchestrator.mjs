@@ -24,7 +24,12 @@ const preview = readFileSync(new URL("./data/preview.txt", import.meta.url), "ut
 const MAX = 4;
 mkdirSync("generated", { recursive: true });
 const short = (m) => m.split("/").pop();
-const code = (s) => (s.match(/```(?:python|py)?\n([\s\S]*?)```/) ?? [, s])[1];
+// Pull the Python out of the reply: a fenced block (closed or not, \n or \r\n), else the whole reply minus stray fences.
+const code = (s) => {
+  const t = s.replace(/\r\n/g, "\n");
+  const m = t.match(/```[a-zA-Z0-9_-]*[ \t]*\n([\s\S]*?)(?:\n```|$)/);
+  return (m ? m[1] : t).replace(/^```.*$/gm, "").trim() + "\n";
+};
 
 await brandLine("Round B");
 await banner("ROUND B", "let the AI write code · key B");
