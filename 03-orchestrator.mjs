@@ -14,6 +14,8 @@ const task = readFileSync(new URL("./TASK.md", import.meta.url), "utf8");
 const preview = readFileSync(new URL("./data/preview.txt", import.meta.url), "utf8");
 mkdirSync("generated", { recursive: true });
 
+// Windows ships "python", macOS/Linux "python3"
+const PY = [process.platform === "win32" ? "python" : "python3", "python3", "python"].find((c) => { try { execFileSync(c, ["--version"], { stdio: "ignore" }); return true; } catch { return false; } }) ?? "python3";
 const code = (s) => (s.match(/```(?:python|py)?\n([\s\S]*?)```/) ?? [, s])[1];
 let spent = 0;
 let feedback = "";
@@ -38,7 +40,7 @@ for (let round = 1; round <= 3; round++) {
 
   let out;
   try {
-    out = execFileSync("python3", [file], { encoding: "utf8", timeout: 120_000 });
+    out = execFileSync(PY, [file], { encoding: "utf8", timeout: 120_000 });
   } catch (e) {
     feedback = `It crashed:\n${String(e.stderr || e.message).slice(-1500)}`;
     console.log("💥 crashed, sending the traceback back");

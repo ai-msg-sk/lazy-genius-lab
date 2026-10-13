@@ -49,8 +49,8 @@ writeFileSync(".env", `OPENROUTER_KEY_A=${A}\nOPENROUTER_KEY_B=${B}\n`);
 console.log("\nMachine");
 const [maj] = process.versions.node.split(".").map(Number);
 maj >= 18 ? ok(`node ${process.versions.node}`) : bad(`node ${process.versions.node}: need 18+`);
-const py = has("python3");
-py ? ok(py) : bad("python3 not found (Round B scripts use it; your agent can also use Node)");
+const py = has("python3") ?? has("python");
+py ? ok(py) : bad("Python 3 not found: get it from python.org (Round B scripts use it), or let your agent use Node")
 const cc = has("claude");
 cc ? ok(`claude code ${cc.split(" ")[0]}`) : console.log("  · claude code not installed (optional: npm i -g @anthropic-ai/claude-code)");
 existsSync("data/openslava-2026-export.xlsx") ? ok("data/openslava-2026-export.xlsx") : bad("dataset missing: re-download the repo");
