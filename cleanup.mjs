@@ -2,15 +2,21 @@
 // unless you type "delete" when asked (Enter or 20 s of silence = keep). Then the feedback QR.
 // Usage: node cleanup.mjs          (keys only, asks about the rest)
 //        node cleanup.mjs --all    (also deletes the whole lab folder, no question)
-import { existsSync, rmSync, readdirSync, statSync, readFileSync } from "node:fs";
+import { existsSync, rmSync, readdirSync, lstatSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { showQR } from "./lib/qr.mjs"; // static import: loaded before anything is deleted
+import { ROOT } from "./lib/paths.mjs";
 import { brandLine, banner, step, checkLine, box, c, isTTY } from "./lib/tui.mjs";
 
 const out = (s) => process.stdout.write(s);
-const here = process.cwd();
+// Always the folder this script lives in, never the current directory: running it from ~ must not touch ~.
+const here = path.resolve(ROOT); // resolve: no trailing slash (the history folder name depends on it)
+// Safe to run again and again: whatever is already gone shows as "not there".
+// The whole-folder delete only ever targets a folder that is clearly this lab.
+const isLabFolder = (d) => ["lab.mjs", "TASK.md", "answers.hashes.json", "verify.mjs"].every((f) => existsSync(path.join(d, f)))
+  && path.resolve(d) !== path.resolve(homedir()) && path.dirname(path.resolve(d)) !== path.resolve(d);
 await brandLine("cleanup");
 await banner("BYE", "cleaning up after the lazy genius lab");
 
@@ -24,14 +30,14 @@ const ccHistory = (() => {
 })();
 
 const targets = [
-  [".env", "your two API keys"],
-  [".claude/settings.local.json", "Claude Code → key B wiring"],
+  [path.join(here, ".env"), "your two API keys"],
+  [path.join(here, ".claude", "settings.local.json"), "Claude Code → key B wiring"],
   [ccHistory, "Claude Code history for this folder (it may contain the keys)"],
 ];
 
 step("Removing your keys");
 for (const [p, what] of targets) {
-  const shown = p.startsWith(homedir()) ? p.replace(homedir(), "~") : p;
+  const shown = p.startsWith(here) ? path.relative(here, p) : p.startsWith(homedir()) ? p.replace(homedir(), "~") : p;
   await checkLine(`${what}  ${c.grey}${shown}${c.reset}`, async () => {
     if (!existsSync(p)) return [null, "not there"];
     rmSync(p, { recursive: true, force: true });
@@ -48,7 +54,8 @@ await checkLine("scanning files for sk-or-v1-…", async () => {
     for (const name of readdirSync(d)) {
       if (name === ".git" || name === "node_modules") continue;
       const p = path.join(d, name);
-      const st = statSync(p);
+      const st = lstatSync(p);
+      if (st.isSymbolicLink()) continue; // never follow links out of the lab folder
       if (st.isDirectory()) walk(p);
       else if (st.size < 20_000_000 && /sk-or-v1-[a-f0-9]{20,}/.test(readFileSync(p, "latin1"))) leftovers.push(path.relative(here, p));
     }
@@ -71,6 +78,10 @@ if (!removeAll && process.stdin.isTTY) {
   if (isTTY) out("\x1b[?25l");
   removeAll = answer.trim().toLowerCase() === "delete";
   if (!removeAll) out(`  ${c.grey}Kept. Your lab folder and my-work/ are still there.${c.reset}\n`);
+}
+if (removeAll && !isLabFolder(here)) {
+  out(`\n  ${c.yellow}Not deleting ${here}: it doesn't look like the lab folder.${c.reset}\n`);
+  removeAll = false;
 }
 if (removeAll) {
   out("\n");
