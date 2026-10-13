@@ -94,7 +94,7 @@ if (isTTY) await sleep(200);
 if (ready) nextBox([
   `${c.green}${c.bold}You're in.${c.reset}`,
   ``,
-  `1  Read ${c.white}${c.bold}TASK.md${c.reset} first ${c.grey}(2 min)${c.reset}`,
+  `1  Read the task (2 min):  ${cmd("node task.mjs")}`,
   `2  Round A:  ${cmd("node 02-paste-into-chat.mjs")}`,
 ]);
 else box([`${c.red}${c.bold}Something is missing.${c.reset} Fix the ✗ above or raise your hand.`], c.red);
