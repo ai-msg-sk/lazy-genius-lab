@@ -16,7 +16,8 @@ node start.mjs
 
 It asks for the **claim code** on your card (e.g. `012-DUNAJ-K7QX`), unlocks your two keys locally,
 checks your machine and both keys, and points Claude Code in this folder at key B.
-No git? Download the ZIP from the green **Code** button. Then read **[TASK.md](TASK.md)**.
+No git? Download the ZIP from the green **Code** button.
+On Windows use **PowerShell** or Windows Terminal (not cmd), and clone into `C:\Users\<you>`, not a OneDrive folder. Then read **[TASK.md](TASK.md)**.
 
 | key | budget | use it for |
 |---|---|---|
@@ -67,7 +68,7 @@ and asks whether to delete the whole folder. Your keys stop working tonight at 2
 Every call is logged in `runs.jsonl` (model, tokens, reasoning tokens, cost, latency).
 
 ```bash
-node -e 'const r=require("fs").readFileSync("runs.jsonl","utf8").trim().split("\n").map(JSON.parse);const by={};for(const x of r){const k=x.tag.split(":")[0];by[k]=(by[k]||0)+x.cost}console.table(by)'
+node -e "const r=require('fs').readFileSync('runs.jsonl','utf8').trim().split('\n').map(JSON.parse);const by={};for(const x of r){const k=x.tag.split(':')[0];by[k]=(by[k]||0)+x.cost}console.table(by)"
 ```
 
 ## ElevenLabs (workshop partner)

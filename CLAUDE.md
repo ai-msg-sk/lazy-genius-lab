@@ -11,3 +11,4 @@ use data/preview.txt to see the layout).
 - When you report a number, say which command produced it.
 - Write answers.json and run `node verify.mjs`. Do not try to reverse the hashes in answers.hashes.json.
 - Budget is $0.50: keep context small, don't paste data into the conversation.
+- On Windows, if `python` prints "Python was not found", use `py -3` instead.

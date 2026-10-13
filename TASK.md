@@ -58,13 +58,42 @@ Python's standard library (`zipfile`, `xml`) reads it with no installs; `openpyx
 
 Timestamps come as `14.10.2026 09:05:07`, `2026-10-14T09:05:07`, `4.3.2026 9:30` or `2026-03-04 09:30`.
 
+## Edge cases (the traps in the data, and how to treat them)
+
+| where | case | rule |
+|---|---|---|
+| Registrácie | same person registered 2–3× with different `reg_id`s | one person = one e-mail |
+| Registrácie, Vstupy | e-mail in UPPER/Mixed case or with spaces around it | lowercase + trim only (there are no spaces inside addresses) |
+| Vstupy, Hodnotenia | badge is a `reg_id` (`R01234`) of any of the person's registrations | belongs to that person |
+| Vstupy, Hodnotenia | badge is `GUEST-…`, `STAFF-…` or an e-mail nobody registered with | belongs to nobody, ignore |
+| Program | title rows above the header, empty row and a note below the talks | only rows whose `ID` looks like `T07` are talks |
+| Hodnotenia | talk given as ID (`T07`) or as title in any case, maybe with a trailing space | match ID exactly, title trimmed + case-insensitive |
+| Hodnotenia | stars `4` (text or number), `4/5`, `4,0`, `★★★★☆` | 4 (count the `★`) |
+| Hodnotenia | stars empty, `n/a`, `-`, `neviem` | ignore the rating |
+| Hodnotenia | rating sent before the talk ended, or on another day | ignore (fake) |
+| Hodnotenia | rating from a registered person with no scan that day | ignore |
+| Hodnotenia | same person rated the same talk several times | keep only the latest valid one (same second: the lower row wins) |
+| Hodnotenia | a talk with very few ratings, all 5★ | that's why it's Bayesian, not a plain average |
+| Catering | `3,40 €`, `€3.40`, `3.40`, `3.4` (text or number) | 3.40 EUR; work in cents |
+| Catering | `STORNO – …` rows with negative `Ks` | include them (they subtract) |
+| Catering | stand `TEST` (some on 13 Oct, some on 14 Oct) | exclude |
+| Catering | timestamps in both formats | day = the date part, 2026-10-14 only |
+| Office planning | `Typ` Úloha / Dobrovoľník / Task | not a booking, ignore |
+| Office planning | `Stav` Zrušené / zrusene / Návrh / draft / cancelled | not confirmed, ignore |
+| Office planning | room `Tatry`, `tatry`, `TATRY`, `Tatry ` | same room; empty room = ignore |
+| Office planning | booking 09:00–10:00 and 10:00–11:00 | touching, **not** overlapping |
+| Office planning | three bookings that all overlap each other | 3 pairs (count every overlapping pair) |
+
+Bookings never cross midnight. All times are local; no time zones.
+
 ## Check
 
 ```bash
 node verify.mjs
 ```
 
-It knows only hashes of the right answers: it tells you right/wrong per question, nothing more.
+This is the test: it knows only hashes of the right answers and tells you right/wrong per question, nothing more.
+A reviewer model can be wrong; `verify.mjs` can't.
 
 ## Two rounds, two keys
 
@@ -72,4 +101,4 @@ It knows only hashes of the right answers: it tells you right/wrong per question
   (`node 02-paste-into-chat.mjs`, or any chatbot you like) and ask for the five numbers.
 - **Round B (key B):** make the AI **write code**, run it on your laptop, verify. Same $0.50.
 
-The burn board on the projector shows A vs. B spend per seat.
+Write both scores and costs on your sheet. We compare at 14:15.
