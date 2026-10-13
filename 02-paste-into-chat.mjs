@@ -8,7 +8,11 @@ import { check } from "./lib/check.mjs";
 import { brandLine, banner, step, note, bar, revealChecks, scoreBox, nextBox, cmd, sleep, wrap, cols, c, isTTY, ASCII } from "./lib/tui.mjs";
 import { carouselPanel, pasteScenes } from "./lib/carousel.mjs";
 import { ROUND_B_PROMPT, copyToClipboard } from "./lib/clipboard.mjs";
+import { excelZoom } from "./lib/excelzoom.mjs";
 
+// hidden: --zoom-only plays just the spreadsheet zoom-out + coverage bars and exits (no API call)
+const zoomOnly = process.argv.includes("--zoom-only");
+if (zoomOnly) process.argv.splice(process.argv.indexOf("--zoom-only"), 1);
 const model = process.argv[2] ?? "google/gemini-3.8-flash";
 const excerpt = readFileSync(new URL("./data/paste-excerpt.txt", import.meta.url), "utf8");
 const task = readFileSync(new URL("./TASK.md", import.meta.url), "utf8");
@@ -16,12 +20,19 @@ const sheets = [...excerpt.matchAll(/^### (.+?) \(first ([\d,]+) of ([\d,]+) row
 const seen = sheets.reduce((s, x) => s + x.n, 0), all = sheets.reduce((s, x) => s + x.of, 0);
 const pct = all ? Math.round((seen / all) * 100) : 0;
 
-await brandLine("Round A");
-await banner("ROUND A", "let the AI guess · key A");
+if (!zoomOnly) {
+  await brandLine("Round A");
+  await banner("ROUND A", "let the AI guess · key A");
+}
 
 step("Copying the spreadsheet into one chat message");
+// close-up of the sheet → Ctrl+C → zoom out to the whole workbook; the bars below are the resting state
+let fullRows = all;
+try { fullRows = JSON.parse(readFileSync(new URL("./data/sizes.json", import.meta.url), "utf8")).fullRows || all; } catch {}
+await excelZoom({ sheets, excerpt, total: fullRows });
 const nameW = Math.max(...sheets.map((x) => x.name.length));
 for (const x of sheets) await bar(x.name.padEnd(nameW), x.n / x.of, `${`${x.n.toLocaleString("en")} / ${x.of.toLocaleString("en")} rows`.padEnd(20)}${c.grey}${((x.n / x.of) * 100).toFixed(0).padStart(3)} %`, 260);
+if (zoomOnly) process.exit(0);
 // Honest sizes: 3 % is our choice for this round, not a hard limit. The real limit is the model's context window.
 const price = await priceOf(model);
 const BYTES_PER_TOKEN = 1.72; // measured: a 281 KB prompt of this spreadsheet = 163,597 tokens
