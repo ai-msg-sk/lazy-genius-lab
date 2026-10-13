@@ -45,6 +45,7 @@ if (isTTY && process.stdin.isTTY) {
   }
 }
 
+if (isTTY) out("\x1b[2J\x1b[3J\x1b[H"); // clean screen: the hunt starts at the top
 out(`\n  ${c.white}${c.bold}Spot the traps.${c.reset} ${c.grey}5 things a human notices in seconds and a model has to guess from 3 % of the rows.${c.reset}\n`);
 out(`  ${c.grey}Look in the sheet, then press${c.reset} ${c.white}y${c.reset} ${c.grey}if you found it or${c.reset} ${c.white}Enter${c.reset} ${c.grey}to be shown.${c.reset}\n\n`);
 
