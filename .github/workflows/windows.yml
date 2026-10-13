@@ -1,0 +1,47 @@
+# Runs the whole attendee flow on a real Windows machine (PowerShell), like a laptop at the lab would.
+name: windows-smoke
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  lab:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Keys (CI key for both rounds)
+        env: { K: "${{ secrets.OPENROUTER_CI_KEY }}" }
+        run: Set-Content -Path .env -Value "OPENROUTER_KEY_A=$env:K`nOPENROUTER_KEY_B=$env:K" -NoNewline
+      - name: start
+        run: node start.mjs
+      - name: task
+        run: node task.mjs --no-open
+      - name: prompt (clipboard)
+        run: node prompt.mjs
+      - name: show (one frame)
+        run: node show.mjs --frame 12 --size 100x30
+      - name: Round A
+        run: node 02-paste-into-chat.mjs anthropic/claude-haiku-5.5
+      - name: Round B
+        run: node 03-orchestrator.mjs
+      - name: verify + finale
+        run: node verify.mjs
+      - name: compare
+        run: node compare.mjs
+      - name: cleanup --all (in a copy)
+        run: |
+          Copy-Item -Recurse -Force . ../copy
+          Set-Location ../copy
+          node cleanup.mjs --all
+          if (Test-Path ../copy) { Get-ChildItem ../copy -Force | Select-Object Name }
