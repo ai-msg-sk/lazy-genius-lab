@@ -19,7 +19,7 @@ const score = () => { try { return check(JSON.parse(readFileSync(findAnswers(), 
 const STEPS = [
   { id: "start", title: "Unlock your keys", time: "2 min", why: "type the claim code from your sheet", run: () => node("start.mjs"), done: () => existsSync(path.join(ROOT, ".env")) },
   { id: "excel", title: "Look at the data", time: "5 min", why: "open the Excel and spot 5 traps yourself", run: () => node("excel.mjs") },
-  { id: "task", title: "Read the task", time: "2 min", why: "the five numbers the organizers need", run: () => node("task.mjs", ["--no-open"]) },
+  { id: "task", title: "Read the task", time: "2 min", why: "the five numbers the organizers need", run: () => node("task.mjs") },
   { id: "roundA", title: "Round A · let the AI guess", time: "15 min", why: "paste the Excel into an AI (key A)", run: () => node("02-paste-into-chat.mjs") },
   { id: "roundB", title: "Round B · let the AI write code", time: "30 min", why: "the AI writes a program, your laptop runs it (key B)", run: roundB, done: () => score() === 5 },
   { id: "results", title: "Your results", time: "3 min", why: "A vs B, your certificate, the feedback QR", run: () => node("verify.mjs") },
@@ -74,8 +74,17 @@ if (!isTTY || !process.stdin.isTTY) {
   process.exit(0);
 }
 
-await brandLine("the lazy genius lab");
+const CLEAR = "\x1b[2J\x1b[3J\x1b[H"; // clear screen + scrollback, cursor home: every view starts at the top
+const pause = async (msg) => {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  out("\x1b[?25h");
+  await rl.question(`\n  ${c.pink}▸${c.reset} ${c.bold}Enter${c.reset} ${c.grey}${msg}${c.reset} `).catch(() => "");
+  rl.close();
+};
+let first = true;
 for (;;) {
+  out(CLEAR);
+  if (first) { await brandLine("the lazy genius lab"); first = false; }
   const next = journey();
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   out("\x1b[?25h");
@@ -86,8 +95,11 @@ for (;;) {
   const i = /^[1-8]$/.test(a) ? Number(a) - 1 : next;
   if (i < 0) continue;
   const s = STEPS[i];
-  out(`\n  ${c.pink}━━ ${i + 1}. ${s.title} ━━${c.reset}\n`);
+  out(CLEAR + `  ${c.pink}━━ step ${i + 1} of ${STEPS.length} · ${s.title} ━━${c.reset}\n`);
   const status = await s.run();
   if (status === 0 && !p.done.includes(s.id)) { p.done.push(s.id); save(p); }
   if (s.id === "cleanup" && !existsSync(ROOT)) break; // the whole folder was deleted
+  // let them read what the step printed before the lab menu replaces it
+  const after = STEPS.findIndex((x) => !isDone(x));
+  await pause(after < 0 ? "= back to your lab" : `= back to your lab · next: ${STEPS[after].title}`);
 }
