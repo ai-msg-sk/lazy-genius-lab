@@ -11,8 +11,10 @@ You need **Node.js 18+**. Python 3 helps. Claude Code is optional.
 ```bash
 git clone https://github.com/ai-msg-sk/lazy-genius-lab
 cd lazy-genius-lab
-node start.mjs
+node lab.mjs
 ```
+
+`node lab.mjs` walks you through every step (Enter = next) and remembers where you are.
 
 It asks for the **claim code** on your card (e.g. `012-DUNAJ-K7QX`), unlocks your two keys locally,
 checks your machine and both keys, and points Claude Code in this folder at key B.

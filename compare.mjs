@@ -1,106 +1,33 @@
-// The finale: Round A vs Round B on your own numbers, then what it means for a real team.
+// The finale: Round A vs Round B on your own numbers, one idea per screen, then your certificate.
 // Usage: node compare.mjs [--devs 10] [--per-day 20] [--days 220] [--reports 20]
+// Pages and certificate: lib/finale.mjs. Not a terminal / NO_COLOR / LAB_ASCII: a short summary only.
+import { readFileSync, appendFileSync, existsSync } from "node:fs";
+import path from "node:path";
+import { createInterface } from "node:readline/promises";
 import { loadResults } from "./lib/results.mjs";
-import { showQR } from "./lib/qr.mjs";
-import { brandLine, step, note, nextBox, cmd, c, fg, sleep, isTTY, out, vis } from "./lib/tui.mjs";
+import { runFinale, printSummary, canPage } from "./lib/finale.mjs";
+import { ROOT } from "./lib/paths.mjs";
+import { out } from "./lib/tui.mjs";
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? Number(process.argv[i + 1]) : d; };
-const DEVS = arg("devs", 10), PER_DAY = arg("per-day", 20), DAYS = arg("days", 220), REPORTS = arg("reports", 20);
+const ENV = path.join(ROOT, ".env");
+const envText = () => { try { return readFileSync(ENV, "utf8"); } catch { return ""; } };
+const envVal = (k) => process.env[k] ?? envText().match(new RegExp(`^${k}=(.*)$`, "m"))?.[1].trim();
 
-// ── your runs ─────────────────────────────────────────────────────────────────────
-const { A, B, bScore } = await loadResults(); // lib/results.mjs: runs.jsonl + answers.json (+ key B spend)
+const { A, B, bScore } = await loadResults();
+const pages = canPage();
 
-// ── helpers ───────────────────────────────────────────────────────────────────────
-const money = (n) => (n >= 1000 ? `$${Math.round(n).toLocaleString("en")}` : n >= 1 ? `$${n.toFixed(2)}` : `$${n.toFixed(4)}`);
-const big = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : `${Math.round(n)}`);
-const W = Math.max(20, Math.min((process.stdout.columns || 80) - 46, 44));
-const ease = (t) => 1 - Math.pow(1 - t, 3);
-
-async function race(label, a, b, fmt, { lowerIsBetter = true } = {}) {
-  const max = Math.max(a, b) || 1;
-  const row = (name, v, col, t) => {
-    const n = Math.max(v > 0 ? 1 : 0, Math.round((W * v * ease(t)) / max));
-    return `    ${c.grey}${name}${c.reset} ${col}${"█".repeat(n)}${c.grey}${"·".repeat(W - n)}${c.reset} ${c.white}${c.bold}${fmt(v * ease(t))}${c.reset}`;
-  };
-  out(`  ${c.bold}${label}${c.reset}\n`);
-  const frames = isTTY ? 18 : 1;
-  for (let f = 1; f <= frames; f++) {
-    const t = f / frames;
-    if (f > 1) out("\x1b[2A");
-    out(`\r\x1b[2K${row("A", a, fg(161), t)}\n\r\x1b[2K${row("B", b, fg(141), t)}\n`);
-    if (isTTY) await sleep(28);
-  }
-  const better = lowerIsBetter ? b < a : b > a;
-  if (a && b && better) note(`B is ${c.reset}${c.green}${c.bold}${lowerIsBetter ? (a / b).toFixed(0) + "× less" : "better"}${c.reset}`);
-  out("\n");
+// Ask once for the name on the certificate; remembered in .env (LAB_NAME), also when skipped.
+let name = envVal("LAB_NAME");
+if (pages && bScore === 5 && name === undefined && process.stdin.isTTY) {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  out("\x1b[?25h");
+  name = (await rl.question("\n  Your first name for the certificate (Enter to skip): ")).replace(/[\r\n=]/g, "").trim().slice(0, 18);
+  rl.close();
+  try { appendFileSync(ENV, `${existsSync(ENV) && !envText().endsWith("\n") && envText() ? "\n" : ""}LAB_NAME=${name}\n`); } catch {}
 }
+const seat = (envVal("LAB_SEAT") ?? "").replace(/\D/g, "").slice(-3);
 
-async function roll(label, value, fmt, color = c.white) {
-  const frames = isTTY ? 24 : 1;
-  for (let f = 1; f <= frames; f++) {
-    out(`\r\x1b[2K    ${c.grey}${label.padEnd(30)}${c.reset}${color}${c.bold}${fmt(value * ease(f / frames))}${c.reset}`);
-    if (isTTY) await sleep(22);
-  }
-  out("\n");
-}
-
-async function type(s, ms = 9) {
-  if (!isTTY) return out(s + "\n");
-  let shown = "";
-  for (const ch of s) { shown += ch; out(ch); if (ch !== " ") await sleep(ms); }
-  out("\n");
-}
-
-// ── the show ──────────────────────────────────────────────────────────────────────
-await brandLine("Round A vs Round B");
-out("\n");
-step(`Same task, two ways${A.ref || B.ref ? `  ${c.grey}(missing runs filled with the speaker's reference numbers)${c.reset}` : ""}`);
-out("\n");
-if (B.score === null) note(`Round B answers not found (answers.json still has Round A's). Run ${cmd("node verify.mjs")} after Round B, then compare again.`);
-else await race("Correct answers  (out of 5)", A.score, B.score, (v) => `${Math.round(v)}/5`, { lowerIsBetter: false });
-await race("Cost per answer", A.cost, B.cost, money);
-if (A.tokens && B.tokens) await race("Tokens sent and received", A.tokens, B.tokens, big);
-await race("Time to the answer  (B: your laptop running the code)", A.secs, B.secs, (v) => `${v.toFixed(1)} s`);
-
-const xCost = B.cost ? A.cost / B.cost : 0, xTime = A.secs / B.secs;
-out(`  ${c.green}${c.bold}B was ${xCost.toFixed(0)}× cheaper, ${xTime.toFixed(0)}× faster${B.score === null ? "" : B.score === 5 ? ", and right" : `, and ${B.score}/5 right`}.${c.reset}`);
-out(`  ${c.grey}A was ${A.score}/5.${c.reset}\n\n`);
-if (isTTY) await sleep(400);
-
-// ── real life ─────────────────────────────────────────────────────────────────────
-const yearlyRuns = DEVS * PER_DAY * DAYS;
-step(`Now scale it: ${DEVS} devs × ${PER_DAY} questions like this a day × ${DAYS} working days`);
-note(`= ${yearlyRuns.toLocaleString("en")} answers a year. A pays every time. B's code is written once per report (${REPORTS} reports) and then runs for free.`);
-out("\n");
-await roll("Way A, a year of pasting", A.cost * yearlyRuns, money, fg(161));
-await roll("Way B, writing the code", B.cost * REPORTS, money, fg(141));
-if (A.tokens) await roll("Tokens burned by A", A.tokens * yearlyRuns, big, fg(161));
-await roll("Hours waiting for A", (A.secs * yearlyRuns) / 3600, (v) => `${Math.round(v).toLocaleString("en")} h`, fg(161));
-await roll("Hours waiting for B", (B.secs * yearlyRuns) / 3600, (v) => `${Math.round(v).toLocaleString("en")} h`, fg(141));
-await roll("Wrong answers from A", yearlyRuns * (1 - A.score / 5), (v) => Math.round(v).toLocaleString("en"), c.red);
-out("\n");
-
-step("Why it matters");
-for (const line of [
-  `${c.white}Right${c.reset}       ${c.grey}a guess that looks confident is worse than no answer. Code is checked by a test.${c.reset}`,
-  `${c.white}Cheap${c.reset}       ${c.grey}tokens scale with the data. Code costs once, then reruns at $0.${c.reset}`,
-  `${c.white}Fast${c.reset}        ${c.grey}a laptop reads 150,000 rows in seconds. A model reads ~3 % of them in a minute.${c.reset}`,
-  `${c.white}Repeatable${c.reset}  ${c.grey}same input, same output. Run it again next month, it still agrees.${c.reset}`,
-  `${c.white}Auditable${c.reset}   ${c.grey}you can read the code. You can't read why a model guessed 7,127.${c.reset}`,
-]) await type(`    ${line}`);
-out("\n");
-out(`  ${c.bold}AI writes. Code runs. AI checks.${c.reset}  ${c.grey}Put that rule in your CLAUDE.md tomorrow morning.${c.reset}\n`);
-
-nextBox([
-  `Write both columns on your sheet. Lowest Round B cost with 5/5 wins ElevenLabs Pro.`,
-  ``,
-  `Bonus (1 min): the organizers found a second export. Does your code survive it?`,
-  `     ${cmd("node bonus.mjs")}`,
-  ``,
-  `When we're done:  ${cmd("node cleanup.mjs")}  ${c.grey}(your work in my-work/ stays)${c.reset}`,
-]);
-
-// 5/5 in Round B: the shareable "Lazy Genius certified" badge (badge.html + a terminal copy), then the feedback QR.
-if (bScore === 5) { try { await (await import("./lib/badge.mjs")).showBadge({ A, B }); } catch {} }
-
-await showQR({ seconds: 25 });
+if (pages) await runFinale({ A, B, bScore, name: name || "", seat: seat ? seat.padStart(3, "0") : "",
+  devs: arg("devs", 10), perDay: arg("per-day", 20), days: arg("days", 220), reports: arg("reports", 20) });
+printSummary({ A, B, bScore });

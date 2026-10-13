@@ -19,7 +19,7 @@ await revealChecks(results);
 const score = results.filter((r) => r.ok).length;
 if (!isTTY) console.log(`Score: ${score}/5`); // plain line for agents and logs
 scoreBox({ score });
-if (score === 5 && !process.argv.includes("--no-finale")) {
+if (score === 5 && !process.argv.includes("--no-finale") && !process.env.LAB_NO_FINALE) {
   // 5/5: show the A-vs-B finale right away (it ends with its own NEXT box)
   const { spawnSync } = await import("node:child_process");
   spawnSync(process.execPath, [new URL("./compare.mjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")], { stdio: "inherit" });

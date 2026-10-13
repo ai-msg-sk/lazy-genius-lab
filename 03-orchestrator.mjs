@@ -207,7 +207,9 @@ results = check(JSON.parse(readFileSync(ANSWERS, "utf8")));
 score = results.filter((r) => r.ok).length;
 await revealChecks(results);
 scoreBox({ score, cost: spent, seconds: secs, round: "B" });
-if (score === 5) {
+if (score === 5 && process.env.LAB_NO_FINALE) {
+  out(`  ${c.green}${c.bold}5/5.${c.reset} ${c.grey}Your results come next.${c.reset}\n`);
+} else if (score === 5) {
   // 5/5: straight into the finale (A vs B, badge, bonus, feedback QR), same as verify.mjs
   const { spawnSync } = await import("node:child_process");
   spawnSync(process.execPath, [new URL("./compare.mjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")], { stdio: "inherit" });
