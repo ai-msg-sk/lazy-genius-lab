@@ -59,6 +59,7 @@ Sonnet and GPT-6.1 Sol eat $0.50 fast. You have been warned.
 | command | what it does |
 |---|---|
 | `node start.mjs` | unlock your keys with the claim code, check your machine |
+| `node excel.mjs` | open the Excel and spot 5 traps yourself (5 min) |
 | `node task.mjs` | show the assignment (and open TASK.md in your editor) |
 | `node 02-paste-into-chat.mjs` | Round A: paste the Excel into an AI and let it guess |
 | `claude` / `node 03-orchestrator.mjs` | Round B: let the AI write code |

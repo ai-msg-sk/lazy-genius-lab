@@ -38,4 +38,4 @@ if (!process.argv.includes("--no-open")) {
   if (isTTY) out(`\n  ${c.grey}Also opened TASK.md in your text editor.${c.reset}\n`);
 }
 
-nextBox([`Round A, let the AI guess:  ${cmd("node 02-paste-into-chat.mjs")}`]);
+nextBox([`Round A, let the AI guess:  ${cmd("node 02-paste-into-chat.mjs")}`, `${c.grey}Haven't looked at the data yet?${c.reset}  ${cmd("node excel.mjs")}`]);

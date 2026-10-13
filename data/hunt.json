@@ -1,0 +1,37 @@
+{
+ "duplicate": {
+  "email": "oleh.balaz@msg.group",
+  "rows": [
+   31,
+   36
+  ],
+  "as": [
+   "OLEH.BALAZ@MSG.GROUP",
+   "Oleh.balaz@msg.group"
+  ]
+ },
+ "star": {
+  "row": 5,
+  "value": "★★★★☆",
+  "talk": "T08"
+ },
+ "storno": {
+  "row": 305,
+  "item": "STORNO – Wrap",
+  "qty": "-1"
+ },
+ "test": {
+  "row": 2,
+  "item": "Flat white"
+ },
+ "room": {
+  "rows": [
+   105,
+   37
+  ],
+  "as": [
+   "Nitra",
+   "Nitra "
+  ]
+ }
+}
