@@ -114,9 +114,20 @@ out("\n\n");
 let parsed = null;
 try { parsed = JSON.parse(json); ensureWork(); writeFileSync(ANSWERS, json); } catch {}
 if (!parsed) {
-  out(`  ${c.red}The answer is not valid JSON, so nothing to check.${c.reset}\n`);
-  nextBox([`Try again or another model:  ${cmd("node 02-paste-into-chat.mjs")}`, `Or move on to Round B:  ${cmd("claude")}  ${c.grey}or${c.reset}  ${cmd("node 03-orchestrator.mjs")}`]);
-  process.exit(1);
+  // Some models refuse to guess from 3 % of the data. That's an honest answer, and still 0/5 for the report.
+  out(`  ${c.yellow}${c.bold}The AI refused to guess.${c.reset} ${c.grey}Honest, but the sponsors still have no numbers at 10:00.${c.reset}\n`);
+  out(`  ${c.grey}Notice what it suggests instead: write code over the full export. That's Round B.${c.reset}\n`);
+  scoreBox({ score: 0, cost: res.cost || costNow(), seconds: secs, round: "A" });
+  const copied = await copyToClipboard(ROUND_B_PROMPT).catch(() => false);
+  nextBox([
+    `1  Write 0/5 and the cost on your sheet (Round A column)`,
+    `2  Round B, let the AI write code:`,
+    `     ${cmd("claude")}   then paste (Cmd+V / Ctrl+V)${copied ? ". Copied to your clipboard." : ": " + ROUND_B_PROMPT}`,
+    `     No Claude Code?  ${cmd("node 03-orchestrator.mjs")}`,
+    ``,
+    `${c.grey}Want to see a model that does guess?${c.reset}  ${cmd("node 02-paste-into-chat.mjs google/gemini-3.8-flash")}`,
+  ]);
+  process.exit(0);
 }
 
 step("Checking against the real numbers");
