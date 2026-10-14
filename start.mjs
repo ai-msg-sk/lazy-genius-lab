@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { scryptSync, createDecipheriv } from "node:crypto";
+import { refreshPath } from "./lib/winpath.mjs";
 import { intro, banner, step, checkLine, decode, box, nextBox, cmd, c, sleep, isTTY } from "./lib/tui.mjs";
 
 const has = (bin, args = ["--version"], opts = {}) => { try { return execFileSync(bin, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000, ...opts }).trim(); } catch { return null; } };
@@ -70,6 +71,7 @@ const findCC = () => has("claude", ["--version"], process.platform === "win32" ?
 let pyOk = await checkLine("Python", async () => { const py = findPy(); return py ? [true, py.replace("Python ", "")] : [null, "not found (Round B runs Python)"]; });
 let ccOk = await checkLine("Claude Code", async () => { const cc = findCC(); return cc ? [true, cc.split(" ")[0]] : [null, "not installed (the AI agent for Round B)"]; });
 
+let restartHint = false; // an install finished but PATH still doesn't show it: tell them to reopen the terminal
 // Offer to install what's missing. Always asks first; nothing is installed without "y".
 async function offer(question, how) {
   if (!isTTY || !process.stdin.isTTY) return false;
@@ -87,14 +89,18 @@ if (!ccOk) {
     ? ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://claude.ai/install.ps1 | iex"]
     : ["bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash"];
   if (await offer(`Install Claude Code now? ${c.grey}(official installer from claude.ai, ~1 min)${c.reset}`, how)) {
-    ccOk = await checkLine("Claude Code", async () => { const cc = findCC(); return cc ? [true, `${cc.split(" ")[0]} · open a new terminal if "claude" isn't found`] : [false, "installed, but open a NEW terminal and run node lab.mjs again"]; });
+    refreshPath();
+    ccOk = await checkLine("Claude Code", async () => { const cc = findCC(); return cc ? [true, cc.split(" ")[0]] : [false, "installed, but this terminal can't see it yet"]; });
+    if (!ccOk) restartHint = true;
   }
 }
 if (!pyOk) {
   const how = process.platform === "win32" ? ["winget", "install", "-e", "--id", "Python.Python.3.13"]
     : process.platform === "darwin" ? ["xcode-select", "--install"] : null;
   if (how && await offer(`Install Python 3 now? ${c.grey}(${how.join(" ")})${c.reset}`, how)) {
-    pyOk = await checkLine("Python", async () => { const py = findPy(); return py ? [true, py.replace("Python ", "")] : [null, "finish the installer, then open a NEW terminal"]; });
+    refreshPath();
+    pyOk = await checkLine("Python", async () => { const py = findPy(); return py ? [true, py.replace("Python ", "")] : [null, "installed, but this terminal can't see it yet"]; });
+    if (!pyOk) restartHint = true;
   } else if (!how) process.stdout.write(`      ${c.grey}Linux: sudo apt install python3  (or your distro's package)${c.reset}\n`);
 }
 ready = (await checkLine("The Excel", async () => [existsSync("data/openslava-2026-export.xlsx"), "150,000 rows, 6 sheets"])) && ready;
@@ -135,3 +141,9 @@ if (ready) nextBox([
   `3  Round A:                   ${cmd("node 02-paste-into-chat.mjs")}`,
 ]);
 else { box([`${c.red}${c.bold}Something is missing.${c.reset} Fix the ✗ above or raise your hand.`], c.red); process.exitCode = 2; }
+if (restartHint) box([
+  `${c.yellow}${c.bold}One more thing: close this terminal window and open a new one.${c.reset}`,
+  `${c.grey}What you just installed is only visible to new windows (a new tab is not enough).${c.reset}`,
+  `Then:  ${cmd(`cd "${process.cwd()}"`)}`,
+  `       ${cmd("node lab.mjs")}   ${c.grey}your progress is kept${c.reset}`,
+], c.yellow);

@@ -23,6 +23,9 @@ jobs:
       - name: Keys (CI key for both rounds)
         env: { K: "${{ secrets.OPENROUTER_CI_KEY }}" }
         run: Set-Content -Path .env -Value "OPENROUTER_KEY_A=$env:K`nOPENROUTER_KEY_B=$env:K" -NoNewline
+      - name: PATH refresh reads the registry (tools installed after the terminal opened)
+        if: runner.os == 'Windows'
+        run: node --input-type=module -e "process.env.Path = 'C:/Windows/system32'; const { refreshPath } = await import('./lib/winpath.mjs'); refreshPath(); const n = process.env.Path.split(';').length; console.log('PATH entries after refresh:', n); if (n < 5) process.exit(1);"
       - name: start
         run: node start.mjs
       - name: task

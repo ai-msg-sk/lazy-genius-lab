@@ -10,6 +10,7 @@ import { ROOT, WORK, findAnswers } from "./lib/paths.mjs";
 import { check } from "./lib/check.mjs";
 import { ROUND_B_PROMPT, copyToClipboard } from "./lib/clipboard.mjs";
 import { brandLine, step, box, cmd, c, isTTY, out } from "./lib/tui.mjs";
+import { refreshPath } from "./lib/winpath.mjs";
 
 const PROGRESS = path.join(WORK, "progress.json");
 const load = () => { try { return JSON.parse(readFileSync(PROGRESS, "utf8")); } catch { return { done: [] }; } };
@@ -51,6 +52,7 @@ async function roundB() {
     return node("03-orchestrator.mjs", [], { LAB_NO_FINALE: "1" });
   }
   const sc = score();
+  if (r.status !== 0 && sc !== 5) out(`\n  ${c.yellow}Claude Code stopped unexpectedly${r.status != null ? ` (exit ${r.status})` : ""}.${c.reset} ${c.grey}Run step 5 again and pick${c.reset} ${c.white}${c.bold}2${c.reset} ${c.grey}(the orchestrator does the same without the agent).${c.reset}\n`);
   out(sc === 5 ? `\n  ${c.green}${c.bold}✓ 5/5.${c.reset} ${c.grey}Round B done.${c.reset}\n`
     : `\n  ${c.yellow}${sc === null ? "No my-work/answers.json yet." : `${sc}/5 so far.`}${c.reset} ${c.grey}Run step 5 again to keep going.${c.reset}\n`);
   return sc === 5 ? 0 : 1;
@@ -152,6 +154,7 @@ for (;;) {
   if (i < 0) { out(CLEAR + `\n  ${c.grey}Progress saved. Continue any time:${c.reset} ${cmd("node lab.mjs")}\n\n\x1b[?25h`); break; }
   const s = STEPS[i];
   out(CLEAR + `  ${c.pink}━━ step ${i + 1} of ${STEPS.length} · ${s.title} ━━${c.reset}\n\x1b[?25h`);
+  refreshPath(); // step 1 may have just installed Python or Claude Code
   const status = await s.run();
   if (s.id === "cleanup" && !existsSync(path.join(ROOT, "lab.mjs"))) { out(`\n  ${c.grey}Lab folder deleted. Type${c.reset} ${cmd("cd ..")}\n\x1b[?25h`); break; } // don't recreate it
   if (status === 0 && !p.done.includes(s.id)) { p.done.push(s.id); save(p); }

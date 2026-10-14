@@ -53,13 +53,18 @@ mkdirSync(path.join(dir, "data"), { recursive: true });
 mkdirSync(path.join(dir, "my-work", "round-b"), { recursive: true });
 copyFileSync(path.join(ROOT, "data", "bonus", "openslava-2026-export.xlsx"), path.join(dir, "data", "openslava-2026-export.xlsx"));
 for (const f of ["TASK.md"]) copyFileSync(path.join(ROOT, f), path.join(dir, f));
+// the program goes into the copy too, at the same place: paths it builds from __file__ then point at the new data
+const relScript = path.relative(ROOT, script);
+const scriptCopy = path.join(dir, relScript.startsWith("..") || path.isAbsolute(relScript) ? path.join("my-work", "round-b", path.basename(script)) : relScript);
+mkdirSync(path.dirname(scriptCopy), { recursive: true });
+copyFileSync(script, scriptCopy);
 const PY = await (async () => { for (const [cmd0, pre] of process.platform === "win32" ? [["py", ["-3"]], ["python", []], ["python3", []]] : [["python3", []], ["python", []]]) { try { const r = await run(cmd0, [...pre, "--version"], { timeout: 10_000 }); if (/Python 3\./.test(r.stdout + r.stderr)) return [cmd0, pre]; } catch {} } return null; })();
 if (!PY) { nextBox([`Python 3 not found. Windows: winget install Python.Python.3.13, then open a new terminal.`]); process.exit(1); }
 
 const t0 = Date.now();
 const ticker = live((f) => `    ${c.pink}${spin(f)}${c.reset} ${c.white}your laptop crunches 150,000 new rows${c.reset} ${c.grey}${((Date.now() - t0) / 1000).toFixed(1)} s${c.reset}  ${c.yellow}${c.bold}AI cost $0.0000${c.reset}`);
 let err = null;
-try { await run(PY[0], [...PY[1], script], { cwd: dir, timeout: 180_000, maxBuffer: 16 << 20, env: { ...process.env, PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" } }); }
+try { await run(PY[0], [...PY[1], scriptCopy], { cwd: dir, timeout: 180_000, maxBuffer: 16 << 20, env: { ...process.env, PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" } }); }
 catch (e) { err = String(e.stderr || e.message).trim().split("\n").slice(-4).join("\n      "); }
 const secs = (Date.now() - t0) / 1000;
 const found = [path.join(dir, "my-work", "answers.json"), path.join(dir, "answers.json")].find((p) => existsSync(p));

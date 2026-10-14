@@ -67,7 +67,7 @@ async function streamed(model, price, prompt, tag, panelOpts) {
   const p = carouselPanel({ model, rows: 8, stats: () => ({ tok: chars / 3.6, cost: inTok * price.in + (chars / 3.6) * price.out }), ...panelOpts });
   const tS = Date.now();
   const r = await askStream(model, prompt, {
-    tag, maxTokens: 16000,
+    tag, maxTokens: 32000, // Haiku can think for 13k tokens before it writes; leave room for the program
     onReasoning: (t) => { chars += t.length; p.reason(t); },
     onText: (t) => { chars += t.length; p.write(t); },
   });
@@ -141,6 +141,12 @@ for (let round = 1; round <= MAX; round++) {
     });
   if (!w.ok) break;
   if (!w.text.trim()) { feedback = "You returned no code. Think less, write the program."; note(`${c.yellow}no code returned, asking again${c.reset}`); out("\n"); continue; }
+  // cut off (max_tokens, or the connection dropped mid-answer): don't run half a program, ask for a shorter one
+  if (w.finish === "length" || (w.finish === null && !/\n```\s*$/.test(w.text.trimEnd()))) {
+    feedback = "Your answer was cut off before the end. Write a shorter program (under 200 lines): no comments, no explanations, no unused helpers.";
+    note(`${c.yellow}the answer was cut off (too long, or the connection dropped) · asking for a shorter one${c.reset}`); out("\n");
+    continue;
+  }
   writeFileSync(file, code(w.text));
   rmSync(ANSWERS, { force: true });
 
