@@ -106,6 +106,19 @@ Registered participants get free ElevenLabs access: join the [ElevenLabs Discord
 open `#coupon-codes`, click **Start Redemption**, pick **OpenSlava Workshop** and use the e-mail you registered with.
 [Video guide](https://youtu.be/S143_JtCtV8).
 
+## After the workshop: run it with your own key
+
+Today's keys stop working at midnight. To run the lab again, create an OpenRouter key at
+[openrouter.ai/keys](https://openrouter.ai/keys) (a few dollars of credit is plenty; a full run costs about $0.20),
+then put it in a file called `.env` in this folder:
+
+```
+OPENROUTER_KEY_A=sk-or-v1-...
+OPENROUTER_KEY_B=sk-or-v1-...
+```
+
+The same key can go on both lines. Then run `node lab.mjs` as usual: step 1 skips the claim code.
+
 ## Take home
 
 **Plan → generate code → execute deterministically → verify → only then report.**
