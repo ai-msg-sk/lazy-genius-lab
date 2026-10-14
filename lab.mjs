@@ -25,7 +25,7 @@ const STEPS = [
   { id: "roundA", title: "Round A · let the AI guess", time: "15 min", why: "paste the Excel into an AI (key A)", run: () => node("02-paste-into-chat.mjs") },
   { id: "roundB", title: "Round B · let the AI write code", time: "30 min", why: "the AI writes a program, your laptop runs it (key B)", run: roundB, done: () => score() === 5 },
   { id: "results", title: "Your results", time: "3 min", why: "A vs B, your certificate, the feedback QR", run: () => node("verify.mjs") },
-  { id: "bonus", title: "Bonus · the second export", time: "2 min", why: "does your code survive new data? ($0)", run: () => node("bonus.mjs") },
+  { id: "bonus", title: "Bonus · the second export", time: "2 min", why: "does your code survive new data? ($0)", run: () => node("bonus.mjs"), optional: true },
   { id: "cleanup", title: "Clean up", time: "1 min", why: "delete your keys; your work stays", run: () => node("cleanup.mjs") },
 ];
 
@@ -123,7 +123,7 @@ function render(sel) {
       return `  ${here ? `${c.pink}${c.bold}▶${c.reset}` : " "} ${mark}  ${c.grey}${i + 1}${c.reset}  ${t}`;
     }),
     "",
-    `     ${c.white}${c.bold}↑ ↓${c.reset} ${c.grey}choose${c.reset}        ${c.white}${c.bold}Enter${c.reset} ${c.grey}start${c.reset}        ${c.white}${c.bold}q${c.reset} ${c.grey}quit${c.reset}        ${c.grey}progress is saved${c.reset}`,
+    `     ${c.white}${c.bold}↑ ↓ / 1–8${c.reset} ${c.grey}choose${c.reset}        ${c.white}${c.bold}Enter${c.reset} ${c.grey}start${c.reset}        ${c.white}${c.bold}q${c.reset} ${c.grey}quit${c.reset}        ${c.grey}progress is saved${c.reset}`,
   ];
   out(CLEAR + o.join("\n") + "\n");
 }
@@ -157,7 +157,7 @@ for (;;) {
   refreshPath(); // step 1 may have just installed Python or Claude Code
   const status = await s.run();
   if (s.id === "cleanup" && !existsSync(path.join(ROOT, "lab.mjs"))) { out(`\n  ${c.grey}Lab folder deleted. Type${c.reset} ${cmd("cd ..")}\n\x1b[?25h`); break; } // don't recreate it
-  if (status === 0 && !p.done.includes(s.id)) { p.done.push(s.id); save(p); }
+  if ((status === 0 || s.optional) && !p.done.includes(s.id)) { p.done.push(s.id); save(p); } // a bonus that fails still counts as seen
   // let them read what the step printed before the menu replaces it
   const after = STEPS.findIndex((x) => !isDone(x));
   await pause(after < 0 ? "= back to your lab" : `= back to your lab · next: ${STEPS[after].title}`);
