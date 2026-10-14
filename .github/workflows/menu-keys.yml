@@ -1,0 +1,21 @@
+# Arrow keys in the lab menu, in a real Windows console (ConPTY, the layer Windows Terminal uses).
+name: menu-keys
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  menu-keys:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pywinpty
+      - name: arrows, digits, a step, the pause, arrows again
+        run: python .github/scripts/menu_keys.py

@@ -3,7 +3,6 @@
 // Usage: node lab.mjs            (↑ ↓ choose, Enter start, 1–8 jump, q quit)
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { createInterface } from "node:readline/promises";
 import { emitKeypressEvents } from "node:readline";
 import path from "node:path";
 import { ROOT, WORK, findAnswers } from "./lib/paths.mjs";
@@ -30,12 +29,12 @@ const STEPS = [
 ];
 
 async function roundB() {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
   out(`\n  ${c.white}${c.bold}Round B: who writes the code?${c.reset}\n`);
   out(`    ${c.pink}1${c.reset}  Claude Code ${c.grey}(recommended: you talk to the agent, it writes and runs the program)${c.reset}\n`);
   out(`    ${c.pink}2${c.reset}  The orchestrator ${c.grey}(no agent needed: watch a cheap model write, your laptop run, a test check)${c.reset}\n`);
-  const a = (await rl.question(`  ${c.pink}▸${c.reset} 1 or 2 ${c.grey}[1]${c.reset}: `).catch(() => "")).trim();
-  rl.close();
+  out(`  ${c.pink}▸${c.reset} 1 or 2 ${c.grey}[Enter = 1]${c.reset}: \x1b[?25h`);
+  const a = await key((str, k) => (str === "1" || str === "2" ? str : k.name === "return" || k.name === "enter" ? "1" : null));
+  out(`${a}\n`);
   if (a === "2") return node("03-orchestrator.mjs", [], { LAB_NO_FINALE: "1" }); // results are step 6
   const copied = copyToClipboard(ROUND_B_PROMPT);
   box([
@@ -80,20 +79,29 @@ if (!isTTY || !process.stdin.isTTY) {
   process.exit(0);
 }
 
+if (process.stdin.isTTY) emitKeypressEvents(process.stdin);
 const CLEAR = "\x1b[2J\x1b[3J\x1b[H"; // clear screen + scrollback, cursor home: every view starts at the top
-// Keys pressed while a step was busy (e.g. Enter while the model thinks) must not skip the next screen.
-const drain = () => new Promise((res) => {
-  if (!process.stdin.isTTY) return res();
-  const sink = () => {};
-  process.stdin.setRawMode(true); process.stdin.resume(); process.stdin.on("data", sink);
-  setTimeout(() => { process.stdin.off("data", sink); process.stdin.pause(); process.stdin.setRawMode(false); res(); }, 150);
-});
+// Every key this process reads goes through key(): raw mode + keypress, never readline. On Windows, a
+// readline prompt followed by raw keypress reads left the menu deaf after the first step.
+// pick(str, key) returns a value to finish, or null to keep waiting. Keys typed while a step was still busy
+// (Enter while the model thinks) arrive in the first moments and are ignored, so they can't skip a screen.
+function key(pick, { ignoreMs = 300 } = {}) {
+  return new Promise((resolve) => {
+    const t0 = Date.now();
+    const onKey = (str, k = {}) => {
+      if (k.ctrl && k.name === "c") { stop(); out("\x1b[?25h\n"); process.exit(130); }
+      if (Date.now() - t0 < ignoreMs) return;
+      const v = pick(str, k);
+      if (v !== null && v !== undefined) { stop(); resolve(v); }
+    };
+    const stop = () => { process.stdin.off("keypress", onKey); process.stdin.setRawMode(false); process.stdin.pause(); };
+    process.stdin.setRawMode(true); process.stdin.resume(); process.stdin.on("keypress", onKey);
+  });
+}
 const pause = async (msg) => {
-  await drain();
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  out("\x1b[?25h");
-  await rl.question(`\n  ${c.pink}▸${c.reset} ${c.bold}Enter${c.reset} ${c.grey}${msg}${c.reset} `).catch(() => "");
-  rl.close();
+  out(`\n  ${c.pink}▸${c.reset} ${c.bold}Enter${c.reset} ${c.grey}${msg}${c.reset} \x1b[?25h`);
+  await key((str, k) => (k.name === "return" || k.name === "enter" ? true : null));
+  out("\n");
 };
 
 // The menu: big card for the selected step, the list below, arrow keys to move.
@@ -129,23 +137,17 @@ function render(sel) {
 }
 async function choose(start) {
   let sel = Math.max(0, start);
+  const move = (to) => { sel = (to + STEPS.length) % STEPS.length; render(sel); return null; };
   render(sel);
-  emitKeypressEvents(process.stdin);
-  process.stdin.setRawMode(true);
-  process.stdin.resume();
   out("\x1b[?25l");
-  return await new Promise((resolve) => {
-    const done = (v) => { process.stdin.off("keypress", onKey); process.stdin.setRawMode(false); process.stdin.pause(); resolve(v); };
-    const onKey = (str, key = {}) => {
-      if (key.ctrl && key.name === "c") return done(-1);
-      if (key.name === "up" || key.name === "k") { sel = (sel + STEPS.length - 1) % STEPS.length; render(sel); }
-      else if (key.name === "down" || key.name === "j" || key.name === "tab") { sel = (sel + 1) % STEPS.length; render(sel); }
-      else if (key.name === "return" || key.name === "enter" || key.name === "space") done(sel);
-      else if (key.name === "q" || key.name === "escape") done(-1);
-      else if (/^[1-8]$/.test(str ?? "")) { sel = Number(str) - 1; render(sel); }
-    };
-    process.stdin.on("keypress", onKey);
-  });
+  return key((str, k) => {
+    if (k.name === "up" || k.name === "k") return move(sel - 1);
+    if (k.name === "down" || k.name === "j" || k.name === "tab") return move(sel + 1);
+    if (/^[1-8]$/.test(str ?? "")) return move(Number(str) - 1);
+    if (k.name === "return" || k.name === "enter" || k.name === "space") return sel;
+    if (k.name === "q" || k.name === "escape") return -1;
+    return null;
+  }, { ignoreMs: 0 }); // the pause before the menu already swallows keys typed during a step
 }
 
 for (;;) {

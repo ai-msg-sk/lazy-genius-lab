@@ -58,5 +58,15 @@ for i in range(2):
     m = mark(); write(DOWN); check(f"after a step: down arrow #{i+1} moves", wait_for(r"STEP \d OF 8", m, 5))
 m = mark(); write("7"); check("after a step: digit 7 jumps", wait_for(r"STEP 7 OF 8", m, 5))
 m = mark(); write(DOWN); check("after a step: down from 7 reaches 8", wait_for(r"STEP 8 OF 8", m, 5))
+# step 2 (Look at the data) reads several prompts in a row: p, Enter, five answers, then the pause and the menu
+m = mark(); write("2"); time.sleep(0.3); write("\r"); check("step 2 starts", wait_for(r"start the hunt", m, 20))
+m = mark(); write("p\r"); check("p peeks, asks again", wait_for(r"start the hunt", m, 10))
+m = mark(); write("\r"); check("hunt starts", wait_for(r"Spot the traps", m, 10))
+for i in range(5):
+    m = mark(); write("y\r"); check(f"trap {i+1} answered", wait_for(r"nice|You spotted", m, 10))
+check("hunt finished", wait_for(r"You spotted 5 of 5", 0, 10))
+m = mark(); time.sleep(0.5); write("\r"); check("menu is back after step 2", wait_for(r"STEP \d OF 8", m, 10))
+m = mark(); write("5"); check("after step 2: digit 5 jumps", wait_for(r"STEP 5 OF 8", m, 5))
+m = mark(); write(UP); check("after step 2: up arrow reaches 4", wait_for(r"STEP 4 OF 8", m, 5))
 write("q"); time.sleep(1)
 sys.exit(0 if ok else 1)
