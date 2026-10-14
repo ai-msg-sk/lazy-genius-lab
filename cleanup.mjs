@@ -6,7 +6,8 @@ import { existsSync, rmSync, readdirSync, lstatSync, readFileSync } from "node:f
 import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
-import { showQR } from "./lib/qr.mjs"; // static import: loaded before anything is deleted
+import { showQR } from "./lib/qr.mjs"; // static imports: loaded before anything is deleted
+import { showCommunity } from "./lib/community.mjs";
 import { ROOT } from "./lib/paths.mjs";
 import { brandLine, banner, step, checkLine, box, c, isTTY } from "./lib/tui.mjs";
 
@@ -107,3 +108,4 @@ box([
 if (!isTTY && leftovers.length) process.exit(1);
 
 await showQR({ seconds: 20 });
+await showCommunity({ seconds: 20 }); // next workshops and news
